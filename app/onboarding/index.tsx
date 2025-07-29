@@ -1,10 +1,10 @@
-import React, { useState } from "react";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import AppIntroSlider from "react-native-app-intro-slider";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import AppIntroSlider from "react-native-app-intro-slider";
 
 export default function OnboardingScreens() {
   const colorScheme = useColorScheme();
@@ -37,7 +37,7 @@ export default function OnboardingScreens() {
   const handleDone = () => {
     AsyncStorage.setItem("hasSeenWalkthrough", "true");
     const router = useRouter();
-    router.push("/auth"); // Switch to auth page
+    router.push("/auth/SignupScreen"); // Switch to auth page
   };
 
   type Slide = {

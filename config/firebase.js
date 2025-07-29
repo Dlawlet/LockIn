@@ -1,0 +1,29 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { initializeApp } from "firebase/app";
+import { browserSessionPersistence, getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { Platform } from "react-native";
+
+// add firebase config
+const firebaseConfig = {
+  apiKey: Constants.expoConfig?.extra?.apiKey,
+  authDomain: Constants.expoConfig?.extra?.authDomain,
+  projectId: Constants.expoConfig?.extra?.projectId,
+  storageBucket: Constants.expoConfig?.extra?.storageBucket,
+  messagingSenderId: Constants.expoConfig?.extra?.messagingSenderId,
+  appId: Constants.expoConfig?.extra?.appId,
+};
+// initialize firebase
+const app = initializeApp(firebaseConfig);
+
+// initialize auth; only for native platforms (Android and iOS)
+
+const persistence = Platform.OS === 'web'
+           ? browserSessionPersistence
+           : getReactNativePersistence(AsyncStorage);
+const auth = initializeAuth(app, {persistence});
+/*const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});*/
+
+export { auth };
