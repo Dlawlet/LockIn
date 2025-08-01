@@ -15,7 +15,7 @@ import { useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
-export const SignupScreen = ({ navigation }: any) => {
+const SignupScreen = ({ navigation }: any) => {
   const [errorState, setErrorState] = useState("");
   const router = useRouter();
   const {

@@ -8,7 +8,7 @@ import { Colors, auth } from "@/config";
 import { passwordResetSchema } from "@/utils";
 import { useRouter } from "expo-router";
 
-export const ForgotPasswordScreen = ({ navigation }: any) => {
+const ForgotPasswordScreen = ({ navigation }: any) => {
   const [errorState, setErrorState] = useState("");
   const router = useRouter();
   const handleSendPasswordResetEmail = (values: { email: any }) => {

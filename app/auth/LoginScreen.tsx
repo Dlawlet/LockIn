@@ -16,7 +16,7 @@ import { useTogglePasswordVisibility } from "@/hooks";
 import { loginValidationSchema } from "@/utils";
 import { useRouter } from "expo-router";
 
-export const LoginScreen = ({ navigation }: any) => {
+const LoginScreen = ({ navigation }: any) => {
   const [errorState, setErrorState] = useState("");
   const { passwordVisibility, handlePasswordVisibility, rightIcon } =
     useTogglePasswordVisibility();
@@ -130,7 +130,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
       {/* App info footer */}
       <View style={styles.footer} isSafe={undefined}>
-        <Text style={styles.footerText}>Expo Firebase Starter App</Text>
+        <Text style={styles.footerText}>LockIn App Version 1.0.0 @2025</Text>
       </View>
     </>
   );
