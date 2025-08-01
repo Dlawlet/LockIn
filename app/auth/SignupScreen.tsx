@@ -1,12 +1,14 @@
 import {
   Button,
   FormErrorMessage,
+  GoogleButton,
   Logo,
   TextInput,
   View,
 } from "@/components/auth";
-import { Colors, Images, auth } from "@/config";
-import { useTogglePasswordVisibility } from "@/hooks";
+import { Images, auth } from "@/config";
+import { useGoogleSignIn, useTogglePasswordVisibility } from "@/hooks";
+import { useThemeColor } from "@/hooks/useThemeColor";
 import { AuthenticatedUserContext } from "@/providers/AuthenticatedUserProvider";
 import { signupValidationSchema } from "@/utils";
 import { useRouter } from "expo-router";
@@ -16,18 +18,19 @@ import { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
+interface SignupFormValues {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
 const SignupScreen = () => {
   const { user } = useContext(AuthenticatedUserContext);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      router.replace("/(tabs)");
-    }
-  }, [user]);
-
+  const { promptAsync } = useGoogleSignIn();
   const [errorState, setErrorState] = useState("");
+
   const {
     passwordVisibility,
     handlePasswordVisibility,
@@ -37,11 +40,18 @@ const SignupScreen = () => {
     confirmPasswordVisibility,
   } = useTogglePasswordVisibility();
 
-  const handleSignup = async (values: {
-    email: any;
-    password: any;
-    confirmPassword?: string;
-  }) => {
+  // Theme-aware colors
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
+  const buttonColor = useThemeColor({}, "button");
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/(tabs)");
+    }
+  }, [user]);
+
+  const handleSignup = async (values: SignupFormValues) => {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -59,12 +69,13 @@ const SignupScreen = () => {
   return (
     <View isSafe style={styles.container}>
       <KeyboardAwareScrollView enableOnAndroid={true}>
-        {/* LogoContainer: consist app logo and screen title */}
-        <View style={styles.logoContainer} isSafe={undefined}>
+        <View isSafe style={styles.logoContainer}>
           <Logo uri={Images.logo} />
-          <Text style={styles.screenTitle}>Create a new account!</Text>
+          <Text style={[styles.screenTitle, { color: textColor }]}>
+            Create a new account!
+          </Text>
         </View>
-        {/* Formik Wrapper */}
+
         <Formik
           initialValues={{
             email: "",
@@ -72,7 +83,7 @@ const SignupScreen = () => {
             confirmPassword: "",
           }}
           validationSchema={signupValidationSchema}
-          onSubmit={(values) => handleSignup(values)}
+          onSubmit={handleSignup}
         >
           {({
             values,
@@ -83,7 +94,6 @@ const SignupScreen = () => {
             handleBlur,
           }) => (
             <>
-              {/* Input fields */}
               <TextInput
                 name="email"
                 leftIconName="email"
@@ -91,14 +101,18 @@ const SignupScreen = () => {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 textContentType="emailAddress"
-                autoFocus={true}
+                autoFocus
                 value={values.email}
                 onChangeText={handleChange("email")}
                 onBlur={handleBlur("email")}
                 rightIcon={undefined}
                 handlePasswordVisibility={undefined}
               />
-              <FormErrorMessage error={errors.email} visible={touched.email} />
+              <FormErrorMessage
+                error={errors.email}
+                visible={!!touched.email}
+              />
+
               <TextInput
                 name="password"
                 leftIconName="key-variant"
@@ -115,12 +129,13 @@ const SignupScreen = () => {
               />
               <FormErrorMessage
                 error={errors.password}
-                visible={touched.password}
+                visible={!!touched.password}
               />
+
               <TextInput
                 name="confirmPassword"
                 leftIconName="key-variant"
-                placeholder="Enter password Again"
+                placeholder="Enter password again"
                 autoCapitalize="none"
                 autoCorrect={false}
                 secureTextEntry={confirmPasswordVisibility}
@@ -133,35 +148,50 @@ const SignupScreen = () => {
               />
               <FormErrorMessage
                 error={errors.confirmPassword}
-                visible={touched.confirmPassword}
+                visible={!!touched.confirmPassword}
               />
-              {/* Display Screen Error Messages */}
-              {errorState !== "" ? (
+
+              {errorState !== "" && (
                 <FormErrorMessage error={errorState} visible={true} />
-              ) : null}
-              {/* Signup button */}
+              )}
+
+              <GoogleButton
+                onPress={async () => {
+                  try {
+                    const result = await promptAsync();
+                    if (result.type === "success") {
+                      // TODO: Handle successful Google sign-in
+                    }
+                  } catch (error) {
+                    console.error("Google Sign-In error:", error);
+                  }
+                }}
+              />
+
               <Button
-                style={styles.button}
+                style={[styles.button, { backgroundColor: buttonColor }]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.buttonText}>Signup</Text>
+                  <Text style={[styles.buttonText, { color: "white" }]}>
+                    Signup
+                  </Text>
                 )}
               </Button>
             </>
           )}
         </Formik>
-        {/* Button to navigate to Login screen */}
+
         <Button
           style={styles.borderlessButtonContainer}
           borderless
           onPress={() => {
             router.push("/auth/LoginScreen");
           }}
-          title="Already have an account ? "
+          title="Already have an account? "
         />
       </KeyboardAwareScrollView>
     </View>
@@ -171,7 +201,6 @@ const SignupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
     paddingHorizontal: 12,
   },
   logoContainer: {
@@ -180,7 +209,6 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 32,
     fontWeight: "700",
-    color: Colors.black,
     paddingTop: 20,
   },
   button: {
@@ -188,13 +216,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 8,
-    backgroundColor: Colors.orange,
     padding: 10,
     borderRadius: 8,
   },
   buttonText: {
     fontSize: 20,
-    color: Colors.white,
     fontWeight: "700",
   },
   borderlessButtonContainer: {

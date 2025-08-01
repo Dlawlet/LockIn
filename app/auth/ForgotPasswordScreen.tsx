@@ -10,7 +10,8 @@ import {
   TextInput,
   View,
 } from "@/components/auth";
-import { Colors, auth } from "@/config";
+import { auth } from "@/config";
+import { useThemeColor } from "@/hooks/useThemeColor";
 import { passwordResetSchema } from "@/utils";
 import { useRouter } from "expo-router";
 
@@ -18,7 +19,13 @@ const ForgotPasswordScreen = () => {
   const [errorState, setErrorState] = useState("");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const handleSendPasswordResetEmail = async (values: { email: any }) => {
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
+  const buttonColor = useThemeColor({}, "button");
+
+  const handleSendPasswordResetEmail = async (values: { email: string }) => {
     setLoading(true);
     try {
       await sendPasswordResetEmail(auth, values.email);
@@ -33,17 +40,20 @@ const ForgotPasswordScreen = () => {
       setLoading(false);
     }
   };
+
   if (loading) return <LoadingIndicator />;
 
   return (
-    <View isSafe style={styles.container}>
-      <View style={styles.innerContainer} isSafe={undefined}>
-        <Text style={styles.screenTitle}>Reset your password</Text>
+    <View isSafe={undefined} style={[styles.container, { backgroundColor }]}>
+      <View isSafe style={styles.innerContainer}>
+        <Text style={[styles.screenTitle, { color: textColor }]}>
+          Reset your password
+        </Text>
       </View>
       <Formik
         initialValues={{ email: "" }}
         validationSchema={passwordResetSchema}
-        onSubmit={(values) => handleSendPasswordResetEmail(values)}
+        onSubmit={handleSendPasswordResetEmail}
       >
         {({
           values,
@@ -54,7 +64,6 @@ const ForgotPasswordScreen = () => {
           handleBlur,
         }) => (
           <>
-            {/* Email input field */}
             <TextInput
               name="email"
               leftIconName="email"
@@ -65,22 +74,20 @@ const ForgotPasswordScreen = () => {
               value={values.email}
               onChangeText={handleChange("email")}
               onBlur={handleBlur("email")}
-              rightIcon={undefined}
-              handlePasswordVisibility={undefined}
             />
-            <FormErrorMessage error={errors.email} visible={touched.email} />
-            {/* Display Screen Error Mesages */}
-            {errorState !== "" ? (
+            <FormErrorMessage error={errors.email} visible={!!touched.email} />
+            {errorState !== "" && (
               <FormErrorMessage error={errorState} visible={true} />
-            ) : null}
-            {/* Password Reset Send Email  button */}
-            <Button style={styles.button} onPress={handleSubmit}>
+            )}
+            <Button
+              style={[styles.button, { backgroundColor: buttonColor }]}
+              onPress={handleSubmit}
+            >
               <Text style={styles.buttonText}>Send Reset Email</Text>
             </Button>
           </>
         )}
       </Formik>
-      {/* Button to navigate to Login screen */}
       <Button
         style={styles.borderlessButtonContainer}
         borderless
@@ -94,7 +101,6 @@ const ForgotPasswordScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
     paddingHorizontal: 12,
   },
   innerContainer: {
@@ -104,7 +110,6 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 32,
     fontWeight: "700",
-    color: Colors.black,
     paddingTop: 20,
   },
   button: {
@@ -112,13 +117,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 8,
-    backgroundColor: Colors.orange,
     padding: 10,
     borderRadius: 8,
   },
   buttonText: {
     fontSize: 20,
-    color: Colors.white,
+    color: "#fff",
     fontWeight: "700",
   },
   borderlessButtonContainer: {

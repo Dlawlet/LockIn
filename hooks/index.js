@@ -1,3 +1,5 @@
+import { useGoogleSignIn } from './useGoogleSignIn';
 import { useTogglePasswordVisibility } from './useTogglePasswordVisibility';
 
-export { useTogglePasswordVisibility };
+export { useGoogleSignIn, useTogglePasswordVisibility };
+

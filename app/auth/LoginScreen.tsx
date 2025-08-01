@@ -7,12 +7,14 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import {
   Button,
   FormErrorMessage,
+  GoogleButton,
   Logo,
   TextInput,
   View,
 } from "@/components/auth";
-import { Colors, Images, auth } from "@/config";
-import { useTogglePasswordVisibility } from "@/hooks";
+import { Images, auth } from "@/config";
+import { useGoogleSignIn, useTogglePasswordVisibility } from "@/hooks";
+import { useThemeColor } from "@/hooks/useThemeColor";
 import { AuthenticatedUserContext } from "@/providers/AuthenticatedUserProvider";
 import { loginValidationSchema } from "@/utils";
 import { useRouter } from "expo-router";
@@ -24,6 +26,12 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useContext(AuthenticatedUserContext);
   const router = useRouter();
+  const { promptAsync } = useGoogleSignIn();
+
+  // Themed colors
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
+  const buttonColor = useThemeColor({}, "button");
 
   useEffect(() => {
     if (user) {
@@ -36,29 +44,30 @@ const LoginScreen = () => {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
-      //router.replace("/(tabs)");
     } catch (error: any) {
       setErrorState(error.message);
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <>
-      <View isSafe style={styles.container}>
-        <KeyboardAwareScrollView enableOnAndroid={true}>
-          {/* LogoContainer: consist app logo and screen title */}
-          <View style={styles.logoContainer} isSafe={undefined}>
+      <View style={[styles.container, { backgroundColor }]} isSafe={undefined}>
+        <KeyboardAwareScrollView enableOnAndroid>
+          {/* Logo & Title */}
+          <View isSafe style={styles.logoContainer}>
             <Logo uri={Images.logo} />
-            <Text style={styles.screenTitle}>Welcome back!</Text>
+            <Text style={[styles.screenTitle, { color: textColor }]}>
+              Welcome back!
+            </Text>
           </View>
+
+          {/* Formik */}
           <Formik
-            initialValues={{
-              email: "",
-              password: "",
-            }}
+            initialValues={{ email: "", password: "" }}
             validationSchema={loginValidationSchema}
-            onSubmit={(values) => handleLogin(values)}
+            onSubmit={handleLogin}
           >
             {({
               values,
@@ -69,7 +78,6 @@ const LoginScreen = () => {
               handleBlur,
             }) => (
               <>
-                {/* Input fields */}
                 <TextInput
                   name="email"
                   leftIconName="email"
@@ -79,7 +87,7 @@ const LoginScreen = () => {
                   textContentType="emailAddress"
                   autoComplete="email"
                   importantForAutofill="yes"
-                  autoFocus={true}
+                  autoFocus
                   value={values.email}
                   onChangeText={handleChange("email")}
                   onBlur={handleBlur("email")}
@@ -88,8 +96,9 @@ const LoginScreen = () => {
                 />
                 <FormErrorMessage
                   error={errors.email}
-                  visible={touched.email}
+                  visible={!!touched.email}
                 />
+
                 <TextInput
                   name="password"
                   leftIconName="key-variant"
@@ -106,28 +115,44 @@ const LoginScreen = () => {
                 />
                 <FormErrorMessage
                   error={errors.password}
-                  visible={touched.password}
+                  visible={!!touched.password}
                 />
-                {/* Display Screen Error Messages */}
-                {errorState !== "" ? (
+
+                {errorState !== "" && (
                   <FormErrorMessage error={errorState} visible={true} />
-                ) : null}
-                {/* Login button */}
+                )}
+
+                <GoogleButton
+                  onPress={async () => {
+                    try {
+                      const result = await promptAsync();
+                      if (result.type === "success") {
+                        // Handle success
+                      }
+                    } catch (error) {
+                      console.error("Google Sign-In error:", error);
+                    }
+                  }}
+                />
+
                 <Button
-                  style={styles.button}
+                  style={[styles.button, { backgroundColor: buttonColor }]}
                   onPress={handleSubmit}
                   disabled={loading}
                 >
                   {loading ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text style={styles.buttonText}>Login</Text>
+                    <Text style={[styles.buttonText, { color: "white" }]}>
+                      Login
+                    </Text>
                   )}
                 </Button>
               </>
             )}
           </Formik>
-          {/* Button to navigate to SignupScreen to create a new account */}
+
+          {/* Navigation links */}
           <Button
             style={styles.borderlessButtonContainer}
             borderless
@@ -138,16 +163,16 @@ const LoginScreen = () => {
             style={styles.borderlessButtonContainer}
             borderless
             title={"Forgot Password"}
-            onPress={() => {
-              router.push("/auth/ForgotPasswordScreen");
-            }}
+            onPress={() => router.push("/auth/ForgotPasswordScreen")}
           />
         </KeyboardAwareScrollView>
       </View>
 
-      {/* App info footer */}
-      <View style={styles.footer} isSafe={undefined}>
-        <Text style={styles.footerText}>LockIn App Version 1.0.0 @2025</Text>
+      {/* Footer */}
+      <View style={[styles.footer, { backgroundColor: backgroundColor }]}>
+        <Text style={[styles.footerText, { color: "orange" }]}>
+          LockIn App Version 1.0.0 @2025
+        </Text>
       </View>
     </>
   );
@@ -156,7 +181,6 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
     paddingHorizontal: 12,
   },
   logoContainer: {
@@ -166,11 +190,9 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 32,
     fontWeight: "700",
-    color: Colors.black,
     paddingTop: 20,
   },
   footer: {
-    backgroundColor: Colors.white,
     paddingHorizontal: 12,
     paddingBottom: 48,
     alignItems: "center",
@@ -178,20 +200,17 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.orange,
   },
   button: {
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 8,
-    backgroundColor: Colors.orange,
     padding: 10,
     borderRadius: 8,
   },
   buttonText: {
     fontSize: 20,
-    color: Colors.white,
     fontWeight: "700",
   },
   borderlessButtonContainer: {
