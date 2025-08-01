@@ -9,26 +9,35 @@ export const Button = ({
   activeOpacity = 0.3,
   borderless = false,
   title,
-  style
+  style,
+  disabled = false
 }) => {
   const _style = useCallback(({ pressed }) => [
     style,
     { opacity: pressed ? activeOpacity : 1 }
+
   ]);
 
   if (borderless) {
     return (
-      <Pressable onPress={onPress} style={_style}>
+      <Pressable onPress={onPress} style={_style} disabled={disabled}>
         <Text style={styles.borderlessButtonText}>{title}</Text>
       </Pressable>
     );
   }
 
   return (
-    <Pressable onPress={onPress} style={_style}>
+    <Pressable onPress={onPress} style={_style} disabled={disabled}>
       {children}
     </Pressable>
   );
+};
+
+// ✅ This will prevent 'children is required' errors
+Button.defaultProps = {
+  children: null,
+  title: "",
+  style: {},
 };
 
 const styles = StyleSheet.create({

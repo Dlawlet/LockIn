@@ -1,6 +1,7 @@
+//import { LoadingIndicator } from "@/components/auth/LoadingIndicator";
+import { LoadingIndicator } from "@/components/auth/LoadingIndicator";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -8,8 +9,15 @@ import AppIntroSlider from "react-native-app-intro-slider";
 
 export default function OnboardingScreens() {
   const colorScheme = useColorScheme();
-  const navigation = useNavigation();
+  const router = useRouter();
+  const [isReady, setIsReady] = React.useState(false);
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsReady(true);
+    }, 100); // Slight delay ensures layout is ready
 
+    return () => clearTimeout(timeout);
+  }, []);
   const slides = [
     {
       key: "slide1",
@@ -34,10 +42,13 @@ export default function OnboardingScreens() {
     },
   ];
 
-  const handleDone = () => {
-    AsyncStorage.setItem("hasSeenWalkthrough", "true");
-    const router = useRouter();
-    router.push("/auth/SignupScreen"); // Switch to auth page
+  const handleDone = async () => {
+    try {
+      await AsyncStorage.setItem("hasSeenWalkthrough", "true");
+      router.push("/auth/SignupScreen");
+    } catch (e) {
+      console.error("Failed to save walkthrough state", e);
+    }
   };
 
   type Slide = {
@@ -51,10 +62,18 @@ export default function OnboardingScreens() {
   const renderItem = ({ item }: { item: Slide }) => (
     <View style={[styles.slide, { backgroundColor: item.backgroundColor }]}>
       <Image source={item.image} style={styles.image} resizeMode="contain" />
-      <Text style={[styles.title, colorScheme === "dark" && styles.titleDark]}>
+      <Text
+        style={[styles.title, colorScheme === "dark" && styles.titleDark]}
+        accessibilityRole="header"
+        accessibilityLabel={`Slide title: ${item.title}`}
+      >
         {item.title}
       </Text>
-      <Text style={[styles.text, colorScheme === "dark" && styles.textDark]}>
+      <Text
+        style={[styles.text, colorScheme === "dark" && styles.textDark]}
+        accessibilityRole="text"
+        accessibilityLabel={item.text}
+      >
         {item.text}
       </Text>
     </View>
@@ -66,6 +85,7 @@ export default function OnboardingScreens() {
     </TouchableOpacity>
   );
 
+  if (!isReady) return <LoadingIndicator />;
   return (
     <AppIntroSlider
       data={slides}

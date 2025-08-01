@@ -18,6 +18,7 @@ export const TextInput = ({
         backgroundColor: Colors.white,
         borderRadius: 8,
         flexDirection: 'row',
+        alignItems: 'center', // 🔥 this is crucial!
         padding: 12,
         marginVertical: 12,
         width,

@@ -7,17 +7,27 @@ import {
 } from "@/components/auth";
 import { Colors, Images, auth } from "@/config";
 import { useTogglePasswordVisibility } from "@/hooks";
+import { AuthenticatedUserContext } from "@/providers/AuthenticatedUserProvider";
 import { signupValidationSchema } from "@/utils";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Formik } from "formik";
-import { useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { useContext, useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
-const SignupScreen = ({ navigation }: any) => {
-  const [errorState, setErrorState] = useState("");
+const SignupScreen = () => {
+  const { user } = useContext(AuthenticatedUserContext);
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/(tabs)");
+    }
+  }, [user]);
+
+  const [errorState, setErrorState] = useState("");
   const {
     passwordVisibility,
     handlePasswordVisibility,
@@ -32,11 +42,18 @@ const SignupScreen = ({ navigation }: any) => {
     password: any;
     confirmPassword?: string;
   }) => {
-    const { email, password } = values;
-
-    createUserWithEmailAndPassword(auth, email, password).catch((error) =>
-      setErrorState(error.message)
-    );
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrorState(error.message);
+      } else {
+        setErrorState("An unknown error occurred.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -103,7 +120,7 @@ const SignupScreen = ({ navigation }: any) => {
               <TextInput
                 name="confirmPassword"
                 leftIconName="key-variant"
-                placeholder="Enter password"
+                placeholder="Enter password Again"
                 autoCapitalize="none"
                 autoCorrect={false}
                 secureTextEntry={confirmPasswordVisibility}
@@ -126,9 +143,13 @@ const SignupScreen = ({ navigation }: any) => {
               <Button
                 style={styles.button}
                 onPress={handleSubmit}
-                title={undefined}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Signup</Text>
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.buttonText}>Signup</Text>
+                )}
               </Button>
             </>
           )}
@@ -137,11 +158,10 @@ const SignupScreen = ({ navigation }: any) => {
         <Button
           style={styles.borderlessButtonContainer}
           borderless
-          title={"Already have an account?"}
           onPress={() => {
             router.push("/auth/LoginScreen");
           }}
-          children={undefined}
+          title="Already have an account ? "
         />
       </KeyboardAwareScrollView>
     </View>
@@ -181,6 +201,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
   },
 });
 

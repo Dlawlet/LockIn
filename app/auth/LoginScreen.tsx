@@ -1,7 +1,7 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Formik } from "formik";
-import { useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { useContext, useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import {
@@ -13,21 +13,36 @@ import {
 } from "@/components/auth";
 import { Colors, Images, auth } from "@/config";
 import { useTogglePasswordVisibility } from "@/hooks";
+import { AuthenticatedUserContext } from "@/providers/AuthenticatedUserProvider";
 import { loginValidationSchema } from "@/utils";
 import { useRouter } from "expo-router";
 
-const LoginScreen = ({ navigation }: any) => {
+const LoginScreen = () => {
   const [errorState, setErrorState] = useState("");
   const { passwordVisibility, handlePasswordVisibility, rightIcon } =
     useTogglePasswordVisibility();
-
-  const handleLogin = (values: { email: string; password: string }) => {
-    const { email, password } = values;
-    signInWithEmailAndPassword(auth, email, password).catch((error) =>
-      setErrorState(error.message)
-    );
-  };
+  const [loading, setLoading] = useState(false);
+  const { user } = useContext(AuthenticatedUserContext);
   const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/(tabs)");
+    }
+  }, [user]);
+
+  const handleLogin = async (values: { email: string; password: string }) => {
+    const { email, password } = values;
+    try {
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+      //router.replace("/(tabs)");
+    } catch (error: any) {
+      setErrorState(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <>
       <View isSafe style={styles.container}>
@@ -62,6 +77,8 @@ const LoginScreen = ({ navigation }: any) => {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   textContentType="emailAddress"
+                  autoComplete="email"
+                  importantForAutofill="yes"
                   autoFocus={true}
                   value={values.email}
                   onChangeText={handleChange("email")}
@@ -99,9 +116,13 @@ const LoginScreen = ({ navigation }: any) => {
                 <Button
                   style={styles.button}
                   onPress={handleSubmit}
-                  title={undefined}
+                  disabled={loading}
                 >
-                  <Text style={styles.buttonText}>Login</Text>
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.buttonText}>Login</Text>
+                  )}
                 </Button>
               </>
             )}
@@ -111,10 +132,7 @@ const LoginScreen = ({ navigation }: any) => {
             style={styles.borderlessButtonContainer}
             borderless
             title={"Create a new account?"}
-            onPress={() => {
-              router.push("/auth/SignupScreen");
-            }}
-            children={undefined}
+            onPress={() => router.push("/auth/SignupScreen")}
           />
           <Button
             style={styles.borderlessButtonContainer}
@@ -123,7 +141,6 @@ const LoginScreen = ({ navigation }: any) => {
             onPress={() => {
               router.push("/auth/ForgotPasswordScreen");
             }}
-            children={undefined}
           />
         </KeyboardAwareScrollView>
       </View>

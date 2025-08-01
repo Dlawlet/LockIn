@@ -3,24 +3,37 @@ import { Formik } from "formik";
 import { useState } from "react";
 import { StyleSheet, Text } from "react-native";
 
-import { Button, FormErrorMessage, TextInput, View } from "@/components/auth";
+import {
+  Button,
+  FormErrorMessage,
+  LoadingIndicator,
+  TextInput,
+  View,
+} from "@/components/auth";
 import { Colors, auth } from "@/config";
 import { passwordResetSchema } from "@/utils";
 import { useRouter } from "expo-router";
 
-const ForgotPasswordScreen = ({ navigation }: any) => {
+const ForgotPasswordScreen = () => {
   const [errorState, setErrorState] = useState("");
   const router = useRouter();
-  const handleSendPasswordResetEmail = (values: { email: any }) => {
-    const { email } = values;
-
-    sendPasswordResetEmail(auth, email)
-      .then(() => {
-        console.log("Success: Password Reset Email sent.");
-        navigation.navigate("Login");
-      })
-      .catch((error) => setErrorState(error.message));
+  const [loading, setLoading] = useState(false);
+  const handleSendPasswordResetEmail = async (values: { email: any }) => {
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, values.email);
+      router.replace("/auth/LoginScreen");
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrorState(error.message);
+      } else {
+        setErrorState("An unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+  if (loading) return <LoadingIndicator />;
 
   return (
     <View isSafe style={styles.container}>
@@ -61,11 +74,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
               <FormErrorMessage error={errorState} visible={true} />
             ) : null}
             {/* Password Reset Send Email  button */}
-            <Button
-              style={styles.button}
-              onPress={handleSubmit}
-              title={undefined}
-            >
+            <Button style={styles.button} onPress={handleSubmit}>
               <Text style={styles.buttonText}>Send Reset Email</Text>
             </Button>
           </>
@@ -77,7 +86,6 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         borderless
         title={"Go back to Login"}
         onPress={() => router.push("/auth/LoginScreen")}
-        children={undefined}
       />
     </View>
   );
