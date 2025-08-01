@@ -1,7 +1,6 @@
+import { Colors } from '@/config';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-
-import { Colors } from '@/config';
 
 export const Button = ({
   children,
@@ -12,15 +11,14 @@ export const Button = ({
   style,
   disabled = false
 }) => {
-  const _style = useCallback(({ pressed }) => [
-    style,
-    { opacity: pressed ? activeOpacity : 1 }
-
-  ]);
+  const _style = useCallback(
+    ({ pressed }) => [style, { opacity: pressed ? activeOpacity : 1 }],
+    [style, activeOpacity]
+  );
 
   if (borderless) {
     return (
-      <Pressable onPress={onPress} style={_style} disabled={disabled}>
+      <Pressable key={title} onPress={onPress} style={_style} disabled={disabled}>
         <Text style={styles.borderlessButtonText}>{title}</Text>
       </Pressable>
     );
@@ -28,21 +26,20 @@ export const Button = ({
 
   return (
     <Pressable onPress={onPress} style={_style} disabled={disabled}>
-      {children}
+      {children ?? <Text>{title}</Text>}
     </Pressable>
   );
 };
 
-// ✅ This will prevent 'children is required' errors
 Button.defaultProps = {
   children: null,
-  title: "",
+  title: '',
   style: {},
 };
 
 const styles = StyleSheet.create({
   borderlessButtonText: {
     fontSize: 16,
-    color: Colors.blue
-  }
+    color: Colors.blue,
+  },
 });

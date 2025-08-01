@@ -184,16 +184,15 @@ const SignupScreen = () => {
             </>
           )}
         </Formik>
-
-        <Button
-          style={styles.borderlessButtonContainer}
-          borderless
-          onPress={() => {
-            router.push("/auth/LoginScreen");
-          }}
-          title="Already have an account? "
-        />
       </KeyboardAwareScrollView>
+      <Button
+        style={styles.borderlessButtonContainer}
+        borderless
+        onPress={() => {
+          router.push("/auth/LoginScreen");
+        }}
+        title="Already have an account? "
+      />
     </View>
   );
 };
@@ -228,6 +227,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
+    marginBottom: 50,
   },
 });
 

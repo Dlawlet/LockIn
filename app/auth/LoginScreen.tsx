@@ -151,25 +151,27 @@ const LoginScreen = () => {
               </>
             )}
           </Formik>
-
-          {/* Navigation links */}
-          <Button
-            style={styles.borderlessButtonContainer}
-            borderless
-            title={"Create a new account?"}
-            onPress={() => router.push("/auth/SignupScreen")}
-          />
-          <Button
-            style={styles.borderlessButtonContainer}
-            borderless
-            title={"Forgot Password"}
-            onPress={() => router.push("/auth/ForgotPasswordScreen")}
-          />
         </KeyboardAwareScrollView>
+
+        <Button
+          style={styles.borderlessButtonContainer}
+          borderless
+          title="Create a new account?"
+          onPress={() => router.push("/auth/SignupScreen")}
+        />
+        <Button
+          style={styles.borderlessButtonContainer}
+          borderless
+          title="Forgot Password"
+          onPress={() => router.push("/auth/ForgotPasswordScreen")}
+        />
       </View>
 
       {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: backgroundColor }]}>
+      <View
+        isSafe={undefined}
+        style={[styles.footer, { backgroundColor: backgroundColor }]}
+      >
         <Text style={[styles.footerText, { color: "orange" }]}>
           LockIn App Version 1.0.0 @2025
         </Text>
@@ -182,6 +184,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 12,
+    paddingBottom: 0,
   },
   logoContainer: {
     alignItems: "center",
@@ -200,6 +203,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     fontWeight: "700",
+    paddingTop: 20,
   },
   button: {
     width: "100%",
@@ -217,6 +221,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 12,
   },
 });
 

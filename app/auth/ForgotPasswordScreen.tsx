@@ -74,6 +74,8 @@ const ForgotPasswordScreen = () => {
               value={values.email}
               onChangeText={handleChange("email")}
               onBlur={handleBlur("email")}
+              rightIcon={undefined}
+              handlePasswordVisibility={undefined}
             />
             <FormErrorMessage error={errors.email} visible={!!touched.email} />
             {errorState !== "" && (
