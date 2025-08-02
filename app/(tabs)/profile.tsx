@@ -261,6 +261,12 @@ export default function ProfileScreen() {
             onPress={() => console.log("View payment details")}
             showArrow={false}
           />
+          <ProfileItem
+            icon="add-circle"
+            title="Créer un nouveau plan"
+            subtitle="Définir un nouvel objectif"
+            onPress={() => console.log("Create new plan")}
+          />
         </ProfileSection>
 
         {/* Settings */}

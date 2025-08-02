@@ -1,6 +1,6 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
@@ -33,7 +33,7 @@ export default function HomeScreen() {
     amountDeposited: 500,
     amountRecovered: 156,
     goalTitle: "Méditation quotidienne",
-    validationWindow: "19h00 - 21h00",
+    validationWindow: "19h00 - 21h00 ",
     currentStreak: 5,
     todayValidated: false,
     weekProgress: [
@@ -161,10 +161,22 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.goalHeader}>
-            <Ionicons name="flag" size={20} color={tint} />
-            <Text style={[styles.goalTitle, { color: textPrimary }]}>
-              {mockData.goalTitle}
-            </Text>
+            <View style={styles.goalInfo}>
+              <MaterialCommunityIcons name="target" size={20} color={tint} />
+              <Text style={[styles.goalTitle, { color: textPrimary }]}>
+                {mockData.goalTitle}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.newPlanButton,
+                { backgroundColor: `${tint}20`, borderColor: tint },
+              ]}
+              onPress={() => console.log("Create new plan")}
+            >
+              <Ionicons name="add" size={16} color={tint} />
+              <Text style={[styles.newPlanText, { color: tint }]}>Nouveau</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.timeWindow}>
             <Ionicons name="time-outline" size={16} color={textSecondary} />
@@ -379,10 +391,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  goalInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
   goalTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginLeft: 8,
+  },
+  newPlanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+  },
+  newPlanText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   timeWindow: {
     flexDirection: "row",
