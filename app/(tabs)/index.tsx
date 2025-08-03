@@ -1,10 +1,11 @@
+import { db } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { collection, getDocs } from "firebase/firestore";
 import React from "react";
 import {
-  Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,8 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -46,6 +45,21 @@ export default function HomeScreen() {
       { day: "D", status: "inactive" },
     ],
   };
+
+  const fetchData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      console.log("Fetched user data successfully");
+      querySnapshot.forEach((doc) => {
+        console.log("User data:", doc.data());
+        console.log(`${doc.id} => ${JSON.stringify(doc.data())}`);
+      });
+    } catch (error) {
+      console.error("Error fetching data: ", error);
+    }
+  };
+  // Call fetchData to retrieve data from Firestore
+  fetchData();
 
   const progressPercentage = (mockData.currentDay / mockData.totalDays) * 100;
   const moneyPercentage =

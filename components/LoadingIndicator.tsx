@@ -19,7 +19,7 @@ export default function LoadingIndicator() {
 
   // Don't render until scheme is determined
   if (!delayedScheme) return null;
-
+  console.log("LoadingIndicator colorScheme:", colorScheme);
   return (
     <View
       style={[

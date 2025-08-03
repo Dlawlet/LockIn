@@ -124,13 +124,14 @@ export default function SocialScreen() {
     },
   ];
 
+  // TODO: Replace with real categories from your API And for adapt to be more consistent
   const categories = [
     { key: "all", label: "Tout", icon: "grid" },
     { key: "motivation", label: "Motivation", icon: "flash" },
     { key: "science", label: "Science", icon: "flask" },
     { key: "success", label: "Success", icon: "trophy" },
     { key: "mindset", label: "Mindset", icon: "bulb" },
-    { key: "tips", label: "Conseils", icon: "lightbulb" },
+    { key: "tips", label: "Conseils", icon: "gift" },
     { key: "guide", label: "Guides", icon: "book" },
   ];
 

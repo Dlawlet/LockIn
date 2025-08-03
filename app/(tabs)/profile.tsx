@@ -1,9 +1,13 @@
+import { auth } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { signOut } from "firebase/auth";
 import React, { useState } from "react";
 import {
   Alert,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -19,6 +23,7 @@ export default function ProfileScreen() {
   const [darkModeEnabled, setDarkModeEnabled] = useState(
     colorScheme === "dark"
   );
+  const router = useRouter();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -47,17 +52,46 @@ export default function ProfileScreen() {
     },
   };
 
-  const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: () => console.log("Logout"),
-      },
-    ]);
+  const webLogout = async () => {
+    const confirmed = window.confirm(
+      "Êtes-vous sûr de vouloir vous déconnecter ?"
+    );
+    if (confirmed) {
+      try {
+        await signOut(auth);
+        router.replace("/auth/LoginScreen");
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
+    }
   };
 
+  const handleLogout = () => {
+    // Alert.alert is not supported on web, so use a confirm dialog instead
+    if (Platform.OS === "web") {
+      webLogout();
+    } else {
+      Alert.alert(
+        "Déconnexion",
+        "Êtes-vous sûr de vouloir vous déconnecter ?",
+        [
+          { text: "Annuler", style: "cancel" },
+          {
+            text: "Déconnexion",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await signOut(auth);
+                router.replace("/auth/LoginScreen");
+              } catch (error) {
+                console.error("Logout error:", error);
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
   const handleDeleteAccount = () => {
     Alert.alert(
       "Supprimer le compte",
