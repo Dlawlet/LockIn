@@ -1,24 +1,34 @@
-import { TextInput as RNTextInput } from 'react-native';
-
 import { Colors } from '@/config';
-import { Button } from './Button';
-import { Icon } from './Icon';
-import { View } from './View';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { TextInput as RNTextInput, View as RNView, TouchableOpacity } from 'react-native';
+
+const iconLibraries = {
+  Ionicons,
+  MaterialCommunityIcons,
+};
 
 export const TextInput = ({
   width = '100%',
   leftIconName,
+  leftIconLibrary = 'Ionicons', // new prop
   rightIcon,
+  rightIconLibrary = 'Ionicons', // new prop
   handlePasswordVisibility,
   ...otherProps
 }) => {
+  const renderIcon = (iconName, iconLibrary, props = {}) => {
+    if (!iconName || !iconLibraries[iconLibrary]) return null;
+    const IconComponent = iconLibraries[iconLibrary];
+    return <IconComponent name={iconName} size={22} color={Colors.mediumGray} {...props} />;
+  };
+
   return (
-    <View
+    <RNView
       style={{
         backgroundColor: Colors.white,
         borderRadius: 8,
         flexDirection: 'row',
-        alignItems: 'center', // 🔥 this is crucial!
+        alignItems: 'center',
         padding: 12,
         marginVertical: 12,
         width,
@@ -27,13 +37,9 @@ export const TextInput = ({
       }}
     >
       {leftIconName ? (
-        <Icon
-          name={leftIconName}
-          size={22}
-          color={Colors.mediumGray}
-          style={{ marginRight: 10 }}
-        />
+        renderIcon(leftIconName, leftIconLibrary, { style: { marginRight: 10 } })
       ) : null}
+      <RNView style={{ flex: 1 }}>
       <RNTextInput
         style={{
           flex: 1,
@@ -44,16 +50,13 @@ export const TextInput = ({
         placeholderTextColor={Colors.mediumGray}
         {...otherProps}
       />
+      </RNView>
+
       {rightIcon ? (
-        <Button onPress={handlePasswordVisibility}>
-          <Icon
-            name={rightIcon}
-            size={22}
-            color={Colors.mediumGray}
-            style={{ marginRight: 10 }}
-          />
-        </Button>
+        <TouchableOpacity onPress={handlePasswordVisibility}>
+          {renderIcon(rightIcon, rightIconLibrary)}
+        </TouchableOpacity>
       ) : null}
-    </View>
+    </RNView>
   );
 };

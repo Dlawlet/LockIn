@@ -1,6 +1,7 @@
 //import { LoadingIndicator } from "@/components/auth/LoadingIndicator";
-import { LoadingIndicator } from "@/components/auth/LoadingIndicator";
+import LoadingIndicator from "@/components/LoadingIndicator";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useThemeColor } from "@/hooks/useThemeColor";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -19,6 +20,7 @@ export default function OnboardingScreens() {
     return () => clearTimeout(timeout);
   }, []);
   const slides = [
+    // Todo: Maybe get this out later
     {
       key: "slide1",
       title: "Welcome to LockIn",
@@ -42,6 +44,9 @@ export default function OnboardingScreens() {
     },
   ];
 
+  // Themed colors
+  const backgroundColor = useThemeColor({}, "background");
+  const tint = useThemeColor({}, "tint");
   const handleDone = async () => {
     try {
       await AsyncStorage.setItem("hasSeenWalkthrough", "true");
@@ -85,7 +90,9 @@ export default function OnboardingScreens() {
     </TouchableOpacity>
   );
 
-  if (!isReady) return <LoadingIndicator />;
+  if (!isReady) {
+    return <LoadingIndicator />;
+  }
   return (
     <AppIntroSlider
       data={slides}
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
   titleDark: {
     color: "#fff",
   },
-  text: {
+  Text: {
     fontSize: 18,
     color: "#555",
     textAlign: "center",
@@ -155,5 +162,8 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
+  },
+  container: {
+    flex: 1,
   },
 });

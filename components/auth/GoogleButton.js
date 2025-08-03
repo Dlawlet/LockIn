@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     height: 40,
     marginRight: 12,
   },
-  text: {
+  Text: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.black,

@@ -1,5 +1,4 @@
-import { LoadingIndicator } from "@/components/auth";
-
+import LoadingIndicator from "@/components/LoadingIndicator";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
   AuthenticatedUserContext,
