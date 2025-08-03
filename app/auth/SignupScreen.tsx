@@ -1,5 +1,6 @@
 import { FormErrorMessage, TextInput } from "@/components/auth";
 import { auth } from "@/config";
+import { db } from "@/config/firebase";
 import { useGoogleSignIn, useTogglePasswordVisibility } from "@/hooks";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -9,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { Formik } from "formik";
 import { useContext, useEffect, useState } from "react";
 import {
@@ -62,6 +64,22 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
+      if (!auth.currentUser) {
+        setErrorState("Utilisateur non authentifié.");
+        return;
+      }
+      await setDoc(doc(db, "users", auth.currentUser.uid), {
+        email: values.email,
+        name: "LockedIn ",
+        firstName: "UserName",
+        currentDay: 0,
+        totalDays: 0,
+        amountDeposited: 0,
+        amountRecovered: 0,
+        currentStreak: 0,
+        todayValidated: false,
+        createdAt: new Date().toISOString(),
+      });
     } catch (error) {
       if (error instanceof Error) {
         setErrorState(error.message);
