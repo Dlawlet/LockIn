@@ -1,0 +1,26 @@
+1. Formalisation du projet LockIn
+Concept principal : Une app de commitment contract avec récompenses exponentielles pour encourager la constance dans l'atteinte d'objectifs personnels.
+Fonctionnalités clés :
+
+Dépôt financier initial (carte/PayPal)
+Configuration d'un "Lock In Plan" (calendrier personnalisé)
+Validation quotidienne dans une fenêtre horaire définie
+Système de gains exponentiels (récupération progressive du dépôt)
+Redistribution des échecs vers des œuvres caritatives
+Dashboard de progression et statistiques
+
+Mécanisme financier :
+
+Dépôt de X€ au début
+Chaque jour réussi = récupération d'une partie croissante
+Formule exponentielle pour atteindre 100% si plan complet respecté
+Jours manqués = perte définitive vers charité choisie
+
+2. Similarité avec l'existant
+Oui, le concept existe déjà ! L'app StickK (développée par des économistes comportementaux de Yale) utilise exactement ce principe : tu mises de l'argent sur un objectif, et si tu échoues, l'argent va à une charité ClickUpMakeUseOf. StickK revendique que tu es 300% plus susceptible d'atteindre ton objectif en misant de l'argent, avec plus de 51 millions de dollars misés par les utilisateurs DailyHabitsHelp Center.
+Différentiation de LockIn :
+
+Focus spécifique sur la constance quotidienne ("Lock In")
+Système de gains exponentiels (vs tout-ou-rien)
+Interface simplifiée et moderne
+Validation dans des créneaux horaires
