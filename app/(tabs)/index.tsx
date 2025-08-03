@@ -1,10 +1,13 @@
 import { db } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { AuthenticatedUserContext } from "@/providers";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import { collection, getDocs } from "firebase/firestore";
-import React from "react";
+import { router } from "expo-router";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import React, { useContext, useEffect, useState } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -14,8 +17,44 @@ import {
   View,
 } from "react-native";
 
+const USER_CACHE_KEY = "userDataCache";
+
+type UserData = {
+  email: string;
+  name: string;
+  firstname: string;
+  currentDay: number;
+  totalDays: number;
+  amountDeposited: number;
+  amountRecovered: number;
+  currentStreak: number;
+  todayValidated: boolean;
+  createdAt: string;
+  goalTitle: string;
+  validationWindow: string;
+  weekProgress: Array<{ day: string; status: string }>;
+};
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
+  const user = useContext(AuthenticatedUserContext);
+  const [userData, setUserData] = useState<UserData>({} as UserData);
+
+  if (!user) {
+    router.replace("/auth/LoginScreen");
+    return null; // Don't render anything
+  }
+
+  // Load cached data on mount
+  useEffect(() => {
+    const loadCache = async () => {
+      const cached = await AsyncStorage.getItem(USER_CACHE_KEY);
+      if (cached) {
+        setUserData(JSON.parse(cached));
+      }
+    };
+    loadCache();
+  }, []);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -46,24 +85,33 @@ export default function HomeScreen() {
     ],
   };
 
-  const fetchData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      console.log("Fetched user data successfully");
-      querySnapshot.forEach((doc) => {
-        console.log("User data:", doc.data());
-        console.log(`${doc.id} => ${JSON.stringify(doc.data())}`);
-      });
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-    }
-  };
-  // Call fetchData to retrieve data from Firestore
-  fetchData();
+  // Attach Firestore listener for real-time updates
+  useEffect(() => {
+    if (!user || !user.user.uid) return;
+    const userDocRef = doc(db, "users", user.user.uid);
 
-  const progressPercentage = (mockData.currentDay / mockData.totalDays) * 100;
+    // Try to fetch once in case cache is outdated
+    getDoc(userDocRef).then((docSnap) => {
+      if (docSnap.exists()) {
+        setUserData(docSnap.data() as UserData);
+        AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(docSnap.data()));
+      }
+    });
+
+    // Real-time listener
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUserData(docSnap.data() as UserData);
+        AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(docSnap.data()));
+      }
+    });
+
+    return unsubscribe; // Clean up on unmount
+  }, [user]);
+
+  const progressPercentage = (userData.currentDay / userData.totalDays) * 100;
   const moneyPercentage =
-    (mockData.amountRecovered / mockData.amountDeposited) * 100;
+    (userData.amountRecovered / userData.amountDeposited) * 100;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -114,7 +162,7 @@ export default function HomeScreen() {
           </View>
 
           <Text style={[styles.dayCounter, { color: textSecondary }]}>
-            Jour {mockData.currentDay}/{mockData.totalDays}
+            Jour {userData.currentDay}/{userData.totalDays}
           </Text>
         </View>
 
@@ -142,19 +190,19 @@ export default function HomeScreen() {
         <View style={styles.moneyStats}>
           <View style={styles.moneyItem}>
             <Text style={[styles.moneyAmount, { color: textPrimary }]}>
-              €{mockData.amountRecovered}
+              €{userData.amountRecovered}
             </Text>
             <Text style={[styles.moneyLabel, { color: textSecondary }]}>
-              Récupéré
+              Récupéré{" "}
             </Text>
           </View>
           <View style={[styles.moneyDivider, { backgroundColor: border }]} />
           <View style={styles.moneyItem}>
             <Text style={[styles.moneyAmount, { color: textPrimary }]}>
-              €{mockData.amountDeposited - mockData.amountRecovered}
+              €{userData.amountDeposited - userData.amountRecovered}
             </Text>
             <Text style={[styles.moneyLabel, { color: textSecondary }]}>
-              En jeu
+              En jeu{" "}
             </Text>
           </View>
         </View>
@@ -178,7 +226,7 @@ export default function HomeScreen() {
             <View style={styles.goalInfo}>
               <MaterialCommunityIcons name="target" size={20} color={tint} />
               <Text style={[styles.goalTitle, { color: textPrimary }]}>
-                {mockData.goalTitle}
+                {userData.goalTitle}
               </Text>
             </View>
             <TouchableOpacity
@@ -195,7 +243,7 @@ export default function HomeScreen() {
           <View style={styles.timeWindow}>
             <Ionicons name="time-outline" size={16} color={textSecondary} />
             <Text style={[styles.timeWindowText, { color: textSecondary }]}>
-              {mockData.validationWindow}
+              {userData.validationWindow}
             </Text>
           </View>
         </View>
@@ -258,7 +306,7 @@ export default function HomeScreen() {
               <Ionicons name="flame" size={20} color="#EF4444" />
             </View>
             <Text style={[styles.statNumber, { color: textPrimary }]}>
-              {mockData.currentStreak}
+              {userData.currentStreak}
             </Text>
             <Text style={[styles.statLabel, { color: textSecondary }]}>
               Série actuelle
@@ -282,7 +330,7 @@ export default function HomeScreen() {
               <Ionicons name="calendar" size={20} color="#3B82F6" />
             </View>
             <Text style={[styles.statNumber, { color: textPrimary }]}>
-              {mockData.totalDays - mockData.currentDay}
+              {userData.totalDays - userData.currentDay}
             </Text>
             <Text style={[styles.statLabel, { color: textSecondary }]}>
               Jours restants
@@ -313,7 +361,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Text style={[styles.nextValidationText, { color: textPrimary }]}>
-            Demain entre {mockData.validationWindow}
+            Demain entre {userData.validationWindow}
           </Text>
         </View>
       </ScrollView>

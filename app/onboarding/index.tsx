@@ -75,7 +75,7 @@ export default function OnboardingScreens() {
         {item.title}
       </Text>
       <Text
-        style={[styles.text, colorScheme === "dark" && styles.textDark]}
+        style={[styles.Text, colorScheme === "dark" && styles.textDark]}
         accessibilityRole="text"
         accessibilityLabel={item.text}
       >

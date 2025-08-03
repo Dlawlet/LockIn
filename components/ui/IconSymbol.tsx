@@ -22,7 +22,7 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "person.2.fill": "group",
-  gear: "settings",
+  "gear.badge": "settings",
   "chart.bar.fill": "bar-chart",
 } as IconMapping;
 
