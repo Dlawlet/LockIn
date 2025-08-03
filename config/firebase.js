@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { initializeApp } from "firebase/app";
 import { browserSessionPersistence, getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { Platform } from "react-native";
 
 // add firebase config
@@ -15,6 +16,7 @@ const firebaseConfig = {
 };
 // initialize firebase
 const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app); // initialize Firestore
 
 // initialize auth; only for native platforms (Android and iOS)
 
