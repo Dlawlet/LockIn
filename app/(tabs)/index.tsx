@@ -1,8 +1,9 @@
+import GoalSection from "@/components/GoalSection";
 import { db } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { AuthenticatedUserContext } from "@/providers";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -19,26 +20,10 @@ import {
 
 const USER_CACHE_KEY = "userDataCache";
 
-type UserData = {
-  email: string;
-  name: string;
-  firstname: string;
-  currentDay: number;
-  totalDays: number;
-  amountDeposited: number;
-  amountRecovered: number;
-  currentStreak: number;
-  todayValidated: boolean;
-  createdAt: string;
-  goalTitle: string;
-  validationWindow: string;
-  weekProgress: Array<{ day: string; status: string }>;
-};
-
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const user = useContext(AuthenticatedUserContext);
-  const [userData, setUserData] = useState<UserData>({} as UserData);
+  const [userData, setUserData] = useState<User>({} as User);
 
   if (!user) {
     router.replace("/auth/LoginScreen");
@@ -87,26 +72,32 @@ export default function HomeScreen() {
 
   // Attach Firestore listener for real-time updates
   useEffect(() => {
+    console.log("🔴 Setting up Firestore listener for user:", user?.user?.uid);
     if (!user || !user.user.uid) return;
     const userDocRef = doc(db, "users", user.user.uid);
 
     // Try to fetch once in case cache is outdated
     getDoc(userDocRef).then((docSnap) => {
       if (docSnap.exists()) {
-        setUserData(docSnap.data() as UserData);
+        setUserData(docSnap.data() as User);
         AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(docSnap.data()));
       }
     });
 
     // Real-time listener
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      console.log("📡 Listener triggered");
+
       if (docSnap.exists()) {
-        setUserData(docSnap.data() as UserData);
+        setUserData(docSnap.data() as User);
         AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(docSnap.data()));
       }
     });
 
-    return unsubscribe; // Clean up on unmount
+    return () => {
+      console.log("🟡 Cleaning up Firestore listener");
+      unsubscribe();
+    }; // Clean up on unmount
   }, [user]);
 
   const progressPercentage = (userData.currentDay / userData.totalDays) * 100;
@@ -213,40 +204,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Goal Section */}
-        <View
-          style={[
-            styles.goalSection,
-            {
-              backgroundColor: cardBackground,
-              borderColor: border,
-            },
-          ]}
-        >
-          <View style={styles.goalHeader}>
-            <View style={styles.goalInfo}>
-              <MaterialCommunityIcons name="target" size={20} color={tint} />
-              <Text style={[styles.goalTitle, { color: textPrimary }]}>
-                {userData.goalTitle}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.newPlanButton,
-                { backgroundColor: `${tint}20`, borderColor: tint },
-              ]}
-              onPress={() => console.log("Create new plan")}
-            >
-              <Ionicons name="add" size={16} color={tint} />
-              <Text style={[styles.newPlanText, { color: tint }]}>Nouveau</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.timeWindow}>
-            <Ionicons name="time-outline" size={16} color={textSecondary} />
-            <Text style={[styles.timeWindowText, { color: textSecondary }]}>
-              {userData.validationWindow}
-            </Text>
-          </View>
-        </View>
+        <GoalSection userData={userData} />
 
         {/* Validation Button */}
         <TouchableOpacity style={styles.validationButton} activeOpacity={0.8}>
@@ -361,7 +319,8 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Text style={[styles.nextValidationText, { color: textPrimary }]}>
-            Demain entre {userData.validationWindow}
+            Demain entre {userData.validationWindow?.start} et{" "}
+            {userData.validationWindow?.end}
           </Text>
         </View>
       </ScrollView>
@@ -441,48 +400,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  goalSection: {
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  goalInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  goalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  newPlanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 4,
-  },
-  newPlanText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  timeWindow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  timeWindowText: {
-    fontSize: 14,
-    marginLeft: 4,
   },
   validationButton: {
     marginHorizontal: 20,
