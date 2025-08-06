@@ -1,5 +1,6 @@
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function GoalSection({ userData }: { userData: User }) {
@@ -26,7 +27,7 @@ export default function GoalSection({ userData }: { userData: User }) {
             styles.newgoalButton,
             { backgroundColor: `${tint}20`, borderColor: tint },
           ]}
-          onPress={() => console.log("Create new goal")}
+          onPress={() => router.push("/goal-config")}
         >
           <Ionicons name="add" size={16} color={tint} />
           <Text style={[styles.newgoalText, { color: tint }]}>
