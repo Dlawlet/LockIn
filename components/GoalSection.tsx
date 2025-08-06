@@ -37,6 +37,8 @@ export default function GoalSection({ userData }: { userData: User }) {
       </View>
     );
   }
+  // Get the current active goal
+  const activeGoal = userData.goals?.find((g) => g.status === "active");
   return (
     <View
       style={[
@@ -51,14 +53,22 @@ export default function GoalSection({ userData }: { userData: User }) {
         <View style={styles.goalInfo}>
           <MaterialCommunityIcons name="target" size={20} color={tint} />
           <Text style={[styles.goalTitle, { color: textPrimary }]}>
-            {userData.goalTitle}
+            {activeGoal?.title || "Aucun Titre d'Objectif Actif"}
           </Text>
         </View>
       </View>
+      {/* Display goal description if available */}
+      {activeGoal?.description && (
+        <Text style={{ color: textSecondary, marginBottom: 8 }}>
+          {activeGoal.description}{" "}
+        </Text>
+      )}
+      {/* Display time window if available */}
       <View style={styles.timeWindow}>
         <Ionicons name="time-outline" size={16} color={textSecondary} />
         <Text style={[styles.timeWindowText, { color: textSecondary }]}>
-          {userData.validationWindow?.start} - {userData.validationWindow?.end}
+          {activeGoal?.validationWindow?.start} -{" "}
+          {activeGoal?.validationWindow?.end}
         </Text>
       </View>
     </View>

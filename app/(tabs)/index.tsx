@@ -27,10 +27,9 @@ export default function HomeScreen() {
 
   if (!user) {
     router.replace("/auth/LoginScreen");
-    return null; // Don't render anything
+    return null;
   }
 
-  // Load cached data on mount
   useEffect(() => {
     const loadCache = async () => {
       const cached = await AsyncStorage.getItem(USER_CACHE_KEY);
@@ -49,34 +48,11 @@ export default function HomeScreen() {
   const tint = useThemeColor({}, "tint");
   const border = useThemeColor({}, "border");
 
-  // Mock data - remplacer par Firebase plus tard
-  const mockData = {
-    currentDay: 12,
-    totalDays: 30,
-    amountDeposited: 500,
-    amountRecovered: 156,
-    goalTitle: "Méditation quotidienne",
-    validationWindow: "19h00 - 21h00 ",
-    currentStreak: 5,
-    todayValidated: false,
-    weekProgress: [
-      { day: "L", status: "success" },
-      { day: "M", status: "success" },
-      { day: "M", status: "failed" },
-      { day: "J", status: "success" },
-      { day: "V", status: "pending" },
-      { day: "S", status: "inactive" },
-      { day: "D", status: "inactive" },
-    ],
-  };
-
-  // Attach Firestore listener for real-time updates
+  // Firestore listener for real-time updates
   useEffect(() => {
-    console.log("🔴 Setting up Firestore listener for user:", user?.user?.uid);
     if (!user || !user.user.uid) return;
     const userDocRef = doc(db, "users", user.user.uid);
 
-    // Try to fetch once in case cache is outdated
     getDoc(userDocRef).then((docSnap) => {
       if (docSnap.exists()) {
         setUserData(docSnap.data() as User);
@@ -84,27 +60,40 @@ export default function HomeScreen() {
       }
     });
 
-    // Real-time listener
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      console.log("📡 Listener triggered");
-
       if (docSnap.exists()) {
         setUserData(docSnap.data() as User);
         AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(docSnap.data()));
       }
     });
 
-    return () => {
-      console.log("🟡 Cleaning up Firestore listener");
-      unsubscribe();
-    }; // Clean up on unmount
+    return () => unsubscribe();
   }, [user]);
 
-  const progressPercentage = (userData.currentDay / userData.totalDays) * 100;
-  const moneyPercentage =
-    (userData.amountRecovered / userData.amountDeposited) * 100;
+  // Get the current active goal
+  const activeGoal = userData.goals?.find((g) => g.status === "active");
 
-  const getStatusColor = (status: string) => {
+  // Progress and stats
+  const currentDay = activeGoal?.currentDays ?? 0;
+  const totalDays = activeGoal?.totalDays ?? 0;
+  const progressPercentage = totalDays ? (currentDay / totalDays) * 100 : 0;
+  const amountDeposited = activeGoal?.amountDeposited ?? 0;
+  const amountRecovered = activeGoal?.amountRecovered ?? 0;
+  const moneyPercentage = amountDeposited
+    ? (amountRecovered / amountDeposited) * 100
+    : 0;
+  const currentStreak = activeGoal?.currentStreak ?? 0;
+  const validationWindow = activeGoal?.validationWindow ?? {
+    start: "--:--",
+    end: "--:--",
+  };
+  const todayValidated = activeGoal?.todayValidated ?? false;
+
+  // Week progress (example: use last 7 days from goal if available)
+  //const weekProgress = activeGoal?.weekProgress ?? [];
+
+  // Helper functions
+  const getStatusColor = (status: HabitStatus) => {
     switch (status) {
       case "success":
         return "#10B981";
@@ -117,7 +106,7 @@ export default function HomeScreen() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: HabitStatus) => {
     switch (status) {
       case "success":
         return "checkmark-circle";
@@ -137,7 +126,7 @@ export default function HomeScreen() {
         backgroundColor={backgroundColor}
       />
 
-      {/* Header avec progression */}
+      {/* Header with progress */}
       <LinearGradient
         colors={
           colorScheme === "dark"
@@ -151,9 +140,10 @@ export default function HomeScreen() {
             <Ionicons name="lock-closed" size={24} color={tint} />
             <Text style={[styles.lockInText, { color: tint }]}>LOCK IN</Text>
           </View>
-
           <Text style={[styles.dayCounter, { color: textSecondary }]}>
-            Jour {userData.currentDay}/{userData.totalDays}
+            {activeGoal
+              ? `Jour ${currentDay}/${totalDays}`
+              : "Aucun objectif actif"}
           </Text>
         </View>
 
@@ -169,7 +159,7 @@ export default function HomeScreen() {
             ]}
           >
             <Text style={[styles.progressPercentage, { color: textPrimary }]}>
-              {Math.round(progressPercentage)}%
+              {activeGoal ? `${Math.round(progressPercentage)}%` : "--"}
             </Text>
             <Text style={[styles.progressLabel, { color: textSecondary }]}>
               Terminé
@@ -181,19 +171,19 @@ export default function HomeScreen() {
         <View style={styles.moneyStats}>
           <View style={styles.moneyItem}>
             <Text style={[styles.moneyAmount, { color: textPrimary }]}>
-              €{userData.amountRecovered}
+              €{amountRecovered}
             </Text>
             <Text style={[styles.moneyLabel, { color: textSecondary }]}>
-              Récupéré{" "}
+              Récupéré
             </Text>
           </View>
           <View style={[styles.moneyDivider, { backgroundColor: border }]} />
           <View style={styles.moneyItem}>
             <Text style={[styles.moneyAmount, { color: textPrimary }]}>
-              €{userData.amountDeposited - userData.amountRecovered}
+              €{amountDeposited - amountRecovered}
             </Text>
             <Text style={[styles.moneyLabel, { color: textSecondary }]}>
-              En jeu{" "}
+              En jeu
             </Text>
           </View>
         </View>
@@ -222,7 +212,7 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Week Progress */}
+        {/*{/* Week Progress 
         <View style={styles.weekSection}>
           <Text style={[styles.sectionTitle, { color: textPrimary }]}>
             Cette semaine
@@ -235,27 +225,31 @@ export default function HomeScreen() {
               },
             ]}
           >
-            {mockData.weekProgress.map((item, index) => (
-              <View key={index} style={styles.dayItem}>
-                <Text style={[styles.dayLabel, { color: textSecondary }]}>
-                  {item.day}
-                </Text>
-                <View
-                  style={[
-                    styles.dayStatus,
-                    { backgroundColor: getStatusColor(item.status) },
-                  ]}
-                >
-                  <Ionicons
-                    name={getStatusIcon(item.status)}
-                    size={16}
-                    color="white"
-                  />
+             {weekProgress.length > 0 ? (
+              weekProgress.map((item, index) => (
+                <View key={index} style={styles.dayItem}>
+                  <Text style={[styles.dayLabel, { color: textSecondary }]}>
+                    {item.day}
+                  </Text>
+                  <View
+                    style={[
+                      styles.dayStatus,
+                      { backgroundColor: getStatusColor(item.status) },
+                    ]}
+                  >
+                    <Ionicons
+                      name={getStatusIcon(item.status)}
+                      size={16}
+                      color="white"
+                    />
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))
+            ) : (
+              <Text style={{ color: textSecondary }}>Aucune donnée</Text>
+            )} 
           </View>
-        </View>
+        </View>*/}
 
         {/* Quick Stats */}
         <View style={styles.quickStats}>
@@ -264,7 +258,7 @@ export default function HomeScreen() {
               <Ionicons name="flame" size={20} color="#EF4444" />
             </View>
             <Text style={[styles.statNumber, { color: textPrimary }]}>
-              {userData.currentStreak}
+              {currentStreak}
             </Text>
             <Text style={[styles.statLabel, { color: textSecondary }]}>
               Série actuelle
@@ -276,7 +270,7 @@ export default function HomeScreen() {
               <Ionicons name="trending-up" size={20} color="#10B981" />
             </View>
             <Text style={[styles.statNumber, { color: textPrimary }]}>
-              {Math.round(moneyPercentage)}%
+              {amountDeposited ? `${Math.round(moneyPercentage)}%` : "--"}
             </Text>
             <Text style={[styles.statLabel, { color: textSecondary }]}>
               Argent récupéré
@@ -288,7 +282,7 @@ export default function HomeScreen() {
               <Ionicons name="calendar" size={20} color="#3B82F6" />
             </View>
             <Text style={[styles.statNumber, { color: textPrimary }]}>
-              {userData.totalDays - userData.currentDay}
+              {activeGoal ? totalDays - currentDay : "--"}
             </Text>
             <Text style={[styles.statLabel, { color: textSecondary }]}>
               Jours restants
@@ -319,8 +313,9 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Text style={[styles.nextValidationText, { color: textPrimary }]}>
-            Demain entre {userData.validationWindow?.start} et{" "}
-            {userData.validationWindow?.end}
+            {activeGoal
+              ? `Demain entre ${validationWindow.start} et ${validationWindow.end}`
+              : "Aucun objectif actif"}
           </Text>
         </View>
       </ScrollView>

@@ -15,6 +15,9 @@ declare global {
     startDate: string;
     endDate: string;
     amountDeposited: number;
+    amountRecovered: number;
+    currentStreak: number;
+    todayValidated: boolean;
     validationWindow: ValidationWindow;
     category: string;
     currentDays: number;
@@ -34,16 +37,7 @@ declare global {
   email: string;
   name: string;
   firstname: string;
-  currentDay: number;
-  totalDays: number;
-  amountDeposited: number;
-  amountRecovered: number;
-  currentStreak: number;
-  todayValidated: boolean;
   createdAt: string;
-  goalTitle: string;
-  validationWindow: ValidationWindow;
-  weekProgress: Array<{ day: string; status: HabitStatus }>;
 };
   
   type ColorScheme = 'light' | 'dark';
