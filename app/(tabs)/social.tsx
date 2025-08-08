@@ -1,8 +1,15 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
+import {
+  BlogPost,
+  getAllBlogPosts,
+  getBlogPostsByCategory,
+  getFeaturedBlogPosts,
+} from "@/services/blogService";
+import { router } from "expo-router";
 import {
   Dimensions,
   Image,
@@ -18,11 +25,14 @@ import {
 const { width } = Dimensions.get("window");
 
 export default function SocialScreen() {
-  const colorScheme = useColorScheme();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [featuredPosts, setFeaturedPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Theme colors
+  const colorScheme = useColorScheme();
   const backgroundColor = useThemeColor({}, "background");
   const cardBackground = useThemeColor({}, "cardBackground");
   const textPrimary = useThemeColor({}, "text");
@@ -30,138 +40,66 @@ export default function SocialScreen() {
   const tint = useThemeColor({}, "tint");
   const border = useThemeColor({}, "border");
 
-  // Mock data - remplacer par API plus tard
-  const mockArticles = [
-    {
-      id: 1,
-      title: "Comment rester motivé pendant 30 jours",
-      shortDescription:
-        "Découvrez les 5 stratégies psychologiques qui vous aideront à maintenir votre motivation sur le long terme.",
-      category: "motivation",
-      author: "Dr. Marie Dubois",
-      publishDate: "2024-01-15",
-      readTime: "5 min",
-      image:
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop",
-      likes: 127,
-      comments: 23,
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "La science derrière les habitudes",
-      shortDescription:
-        "Plongez dans les mécanismes neurologique qui régissent la formation des habitudes et apprenez à les exploiter.",
-      category: "science",
-      author: "Prof. Jean Martin",
-      publishDate: "2024-01-12",
-      readTime: "8 min",
-      image:
-        "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=200&fit=crop",
-      likes: 89,
-      comments: 15,
-      featured: false,
-    },
-    {
-      id: 3,
-      title: "Success Story: De 0 à 100 jours de méditation",
-      shortDescription:
-        "L'histoire inspirante de Sarah qui a transformé sa vie grâce à la méditation quotidienne avec LockIn.",
-      category: "success",
-      author: "Sarah L.",
-      publishDate: "2024-01-10",
-      readTime: "4 min",
-      image:
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop",
-      likes: 203,
-      comments: 45,
-      featured: true,
-    },
-    {
-      id: 4,
-      title: "Gérer les échecs et rebondir",
-      shortDescription:
-        "Pourquoi échouer fait partie du processus et comment transformer vos échecs en apprentissage.",
-      category: "mindset",
-      author: "Alex Thompson",
-      publishDate: "2024-01-08",
-      readTime: "6 min",
-      image:
-        "https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=400&h=200&fit=crop",
-      likes: 156,
-      comments: 32,
-      featured: false,
-    },
-    {
-      id: 5,
-      title: "Les meilleurs moments pour valider",
-      shortDescription:
-        "Analyse des données de 10,000 utilisateurs pour déterminer les créneaux horaires les plus efficaces.",
-      category: "tips",
-      author: "Équipe LockIn",
-      publishDate: "2024-01-05",
-      readTime: "3 min",
-      image:
-        "https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=400&h=200&fit=crop",
-      likes: 92,
-      comments: 18,
-      featured: false,
-    },
-    {
-      id: 6,
-      title: "Choisir sa cause caritative",
-      shortDescription:
-        "Guide complet pour sélectionner l'œuvre caritative qui vous motivera le plus dans votre démarche.",
-      category: "guide",
-      author: "Marie Conscience",
-      publishDate: "2024-01-03",
-      readTime: "7 min",
-      image:
-        "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=200&fit=crop",
-      likes: 74,
-      comments: 12,
-      featured: false,
-    },
-  ];
+  useEffect(() => {
+    loadBlogPosts();
+  }, []);
 
-  // TODO: Replace with real categories from your API And for adapt to be more consistent
-  const categories = [
-    { key: "all", label: "Tout", icon: "grid" },
-    { key: "motivation", label: "Motivation", icon: "flash" },
-    { key: "science", label: "Science", icon: "flask" },
-    { key: "success", label: "Success", icon: "trophy" },
-    { key: "mindset", label: "Mindset", icon: "bulb" },
-    { key: "tips", label: "Conseils", icon: "gift" },
-    { key: "guide", label: "Guides", icon: "book" },
-  ];
+  useEffect(() => {
+    filterBlogPosts();
+  }, [selectedCategory, blogPosts]);
 
-  const filteredArticles =
-    selectedCategory === "all"
-      ? mockArticles
-      : mockArticles.filter((article) => article.category === selectedCategory);
-
-  const featuredArticles = mockArticles.filter((article) => article.featured);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    // Simuler le rechargement
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+  const loadBlogPosts = async () => {
+    try {
+      setLoading(true);
+      const [allPosts, featured] = await Promise.all([
+        getAllBlogPosts(),
+        getFeaturedBlogPosts(),
+      ]);
+      setBlogPosts(allPosts);
+      setFeaturedPosts(featured);
+    } catch (error) {
+      console.error("Error loading blog posts:", error);
+      // En cas d'erreur, utiliser des tableaux vides
+      setBlogPosts([]);
+      setFeaturedPosts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const formatDate = (dateString: string | number | Date) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+  const [filteredArticles, setFilteredArticles] = useState<BlogPost[]>([]);
+
+  const filterBlogPosts = async () => {
+    try {
+      if (selectedCategory === "all") {
+        setFilteredArticles(blogPosts);
+      } else {
+        const filtered = await getBlogPostsByCategory(selectedCategory);
+        setFilteredArticles(filtered);
+      }
+    } catch (error) {
+      console.error("Error filtering blog posts:", error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadBlogPosts();
+    setRefreshing(false);
+  };
+
+  const handleReadArticle = (article: BlogPost) => {
+    router.push(`/read-blog?id=${article.id}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
       day: "numeric",
       month: "short",
+      year: "numeric",
     });
   };
-
-  const handleReadArticle = (article: { title: any }) => {
-    console.log("Open article:", article.title);
-    // Navigation vers l'article détaillé
-  };
-
   type Article = {
     id: number;
     title: string;
@@ -176,11 +114,21 @@ export default function SocialScreen() {
     featured: boolean;
   };
 
+  // Define categories array
+  const categories = [
+    { key: "all", label: "Tous", icon: "apps" },
+    { key: "motivation", label: "Motivation", icon: "flame" },
+    { key: "nutrition", label: "Nutrition", icon: "nutrition" },
+    { key: "entrainement", label: "Entraînement", icon: "barbell" },
+    { key: "bien-etre", label: "Bien-être", icon: "leaf" },
+    { key: "conseils", label: "Conseils", icon: "bulb" },
+  ];
+
   const ArticleCard = ({
     article,
     featured = false,
   }: {
-    article: Article;
+    article: BlogPost;
     featured?: boolean;
   }) => (
     <TouchableOpacity
@@ -327,9 +275,8 @@ export default function SocialScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
         {/* Featured Articles */}
-        {selectedCategory === "all" && featuredArticles.length > 0 && (
+        {selectedCategory === "all" && featuredPosts.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: textPrimary }]}>
               À la une
@@ -339,7 +286,7 @@ export default function SocialScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredContainer}
             >
-              {featuredArticles.map((article) => (
+              {featuredPosts.map((article) => (
                 <View key={article.id} style={styles.featuredArticleWrapper}>
                   <ArticleCard article={article} featured={true} />
                 </View>
@@ -347,7 +294,6 @@ export default function SocialScreen() {
             </ScrollView>
           </View>
         )}
-
         {/* Articles List */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: textPrimary }]}>
@@ -360,7 +306,6 @@ export default function SocialScreen() {
             <ArticleCard key={article.id} article={article} />
           ))}
         </View>
-
         {/* Load More */}
         <TouchableOpacity
           style={[styles.loadMoreButton, { backgroundColor: cardBackground }]}
@@ -534,5 +479,26 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    textAlign: "center",
   },
 });

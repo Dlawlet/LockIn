@@ -18,24 +18,6 @@ export interface BlogPost {
   tags: string[];
   createdAt: string;
   updatedAt: string;
-}
-
-export const getAllBlogPosts = async (): Promise<BlogPost[]> => {
-  try {
-    const blogsRef = collection(db, 'blogs');
-    const q = query(blogsRef, orderBy('publishDate', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    const blogPosts: BlogPost[] = [];
-    querySnapshot.forEach((doc) => {
-      blogPosts.push({ ...doc.data(), id: doc.id } as BlogPost);
-    });
-    
-    return blogPosts;
-  } catch (error) {
-    console.error('Error fetching blog posts:', error);
-    throw new Error('Failed to fetch blog posts');
-  }
 };
 
 export const getBlogPost = async (id: string): Promise<BlogPost | null> => {
@@ -76,6 +58,7 @@ export const getBlogPostsByCategory = async (category: string): Promise<BlogPost
   }
 };
 
+
 export const getFeaturedBlogPosts = async (): Promise<BlogPost[]> => {
   try {
     const blogsRef = collection(db, 'blogs');
@@ -93,8 +76,38 @@ export const getFeaturedBlogPosts = async (): Promise<BlogPost[]> => {
     });
     
     return blogPosts;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching featured blog posts:', error);
+    
+    // Si la collection n'existe pas, retourner un tableau vide
+    if (error.code === 'failed-precondition' || error.code === 'not-found') {
+      return [];
+    }
+    
     throw new Error('Failed to fetch featured blog posts');
+  }
+};
+
+export const getAllBlogPosts = async (): Promise<BlogPost[]> => {
+  try {
+    const blogsRef = collection(db, 'blogs');
+    const q = query(blogsRef, orderBy('publishDate', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const blogPosts: BlogPost[] = [];
+    querySnapshot.forEach((doc) => {
+      blogPosts.push({ ...doc.data(), id: doc.id } as BlogPost);
+    });
+    
+    return blogPosts;
+  } catch (error: any) {
+    console.error('Error fetching blog posts:', error);
+    
+    // Si la collection n'existe pas, retourner un tableau vide
+    if (error.code === 'failed-precondition' || error.code === 'not-found') {
+      return [];
+    }
+    
+    throw new Error('Failed to fetch blog posts');
   }
 };
