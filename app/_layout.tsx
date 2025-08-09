@@ -81,6 +81,7 @@ function RootLayoutContent() {
         />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="goal-config" options={{ headerShown: false }} />
+        <Stack.Screen name="read-blog" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
         {/* <Stack.Screen name="*" redirectTo="(tabs)" /> */}
       </Stack>

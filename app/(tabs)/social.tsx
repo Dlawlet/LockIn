@@ -6,7 +6,6 @@ import React, { useEffect, useState } from "react";
 import {
   BlogPost,
   getAllBlogPosts,
-  getBlogPostsByCategory,
   getFeaturedBlogPosts,
 } from "@/services/blogService";
 import { router } from "expo-router";
@@ -74,7 +73,10 @@ export default function SocialScreen() {
       if (selectedCategory === "all") {
         setFilteredArticles(blogPosts);
       } else {
-        const filtered = await getBlogPostsByCategory(selectedCategory);
+        // Filtrer localement plutôt que refaire une requête
+        const filtered = blogPosts.filter(
+          (post) => post.category === selectedCategory
+        );
         setFilteredArticles(filtered);
       }
     } catch (error) {
@@ -114,14 +116,14 @@ export default function SocialScreen() {
     featured: boolean;
   };
 
-  // Define categories array
+  // Définir les catégories en fonction de celles dans populate.tsx
   const categories = [
     { key: "all", label: "Tous", icon: "apps" },
     { key: "motivation", label: "Motivation", icon: "flame" },
-    { key: "nutrition", label: "Nutrition", icon: "nutrition" },
-    { key: "entrainement", label: "Entraînement", icon: "barbell" },
-    { key: "bien-etre", label: "Bien-être", icon: "leaf" },
-    { key: "conseils", label: "Conseils", icon: "bulb" },
+    { key: "mindset", label: "Mindset", icon: "bulb" },
+    { key: "productivite", label: "Productivité", icon: "checkmark-circle" },
+    { key: "bienetre", label: "Bien-être", icon: "leaf" },
+    { key: "habitudes", label: "Habitudes", icon: "repeat" },
   ];
 
   const ArticleCard = ({
@@ -192,18 +194,28 @@ export default function SocialScreen() {
                 {article.likes}
               </Text>
             </View>
-            <View style={styles.statItem}>
+            {/* <View style={styles.statItem}>
               <Ionicons name="chatbubble" size={14} color={textSecondary} />
               <Text style={[styles.statText, { color: textSecondary }]}>
                 {article.comments}
               </Text>
-            </View>
+            </View> */}
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
 
+  // Juste avant le return, ajoutez :
+  console.log("Featured posts count:", featuredPosts.length);
+  console.log(
+    "Featured posts:",
+    featuredPosts.map((p) => ({
+      id: p.id,
+      title: p.title,
+      featured: p.featured,
+    }))
+  );
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <StatusBar
@@ -369,23 +381,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 20,
   },
-  featuredContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  featuredArticleWrapper: {
-    width: width * 0.8,
-  },
-  articleCard: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  featuredCard: {
-    marginHorizontal: 0,
-  },
   featuredBadge: {
     position: "absolute",
     top: 12,
@@ -500,5 +495,30 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     textAlign: "center",
+  },
+  featuredContainer: {
+    paddingLeft: 20,
+    paddingRight: 20,
+    flexDirection: "row", // Ajout important
+  },
+  featuredScrollView: {
+    paddingLeft: 20,
+  },
+  featuredArticleWrapper: {
+    width: width * 0.75,
+    marginRight: 16,
+  },
+  featuredCard: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+  },
+
+  // Pour les cartes normales
+  articleCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
   },
 });

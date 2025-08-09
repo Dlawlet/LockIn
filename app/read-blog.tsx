@@ -1,6 +1,6 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { getBlogPost } from "@/services/blogService";
+import { getBlogPost, toggleBlogLike } from "@/services/blogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -76,9 +76,31 @@ export default function ReadBlogPage() {
     });
   };
 
-  const handleLike = () => {
-    setLiked(!liked);
-    // TODO: Implement like functionality
+  const handleLike = async () => {
+    if (!blogPost) return;
+
+    try {
+      const newLikedState = !liked;
+
+      // Mettre à jour l'état local immédiatement (optimistic update)
+      setLiked(newLikedState);
+      setBlogPost({
+        ...blogPost,
+        likes: blogPost.likes + (newLikedState ? 1 : -1),
+      });
+
+      // Mettre à jour la base de données
+      await toggleBlogLike(blogPost.id, newLikedState);
+    } catch (error) {
+      console.error("Error updating like:", error);
+
+      // Reverser l'état en cas d'erreur
+      setLiked(!liked);
+      setBlogPost({
+        ...blogPost,
+        likes: blogPost.likes + (liked ? 1 : -1),
+      });
+    }
   };
 
   const handleShare = () => {
@@ -220,12 +242,12 @@ export default function ReadBlogPage() {
                   {blogPost.likes}
                 </Text>
               </View>
-              <View style={styles.statItem}>
+              {/* <View style={styles.statItem}>
                 <Ionicons name="chatbubble" size={16} color={textSecondary} />
                 <Text style={[styles.statText, { color: textSecondary }]}>
                   {blogPost.comments}
                 </Text>
-              </View>
+              </View> */}
             </View>
           </View>
         </View>
