@@ -1,13 +1,11 @@
-import { auth } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { signOut } from "firebase/auth";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   Alert,
-  Platform,
+  Dimensions,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -17,13 +15,47 @@ import {
   View,
 } from "react-native";
 
+const { width } = Dimensions.get("window");
+
+interface UserStats {
+  totalDays: number;
+  currentStreak: number;
+  completedHabits: number;
+  readArticles: number;
+}
+
+interface UserProfile {
+  name: string;
+  email: string;
+  joinDate: string;
+  avatar?: string;
+  level: number;
+  xp: number;
+  nextLevelXp: number;
+}
+
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: "Alex Martin",
+    email: "alex.martin@example.com",
+    joinDate: "2024-01-01",
+    level: 12,
+    xp: 2340,
+    nextLevelXp: 2500,
+  });
+
+  const [userStats, setUserStats] = useState<UserStats>({
+    totalDays: 45,
+    currentStreak: 7,
+    completedHabits: 156,
+    readArticles: 23,
+  });
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(
     colorScheme === "dark"
   );
-  const router = useRouter();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -33,179 +65,113 @@ export default function ProfileScreen() {
   const tint = useThemeColor({}, "tint");
   const border = useThemeColor({}, "border");
 
-  // Mock data - remplacer par Firebase plus tard
-  const mockUserData = {
-    name: "Alex Martin",
-    email: "alex.martin@email.com",
-    joinDate: "2024-01-01",
-    totalPlans: 3,
-    completedPlans: 1,
-    totalAmountDeposited: 1500,
-    totalAmountRecovered: 1200,
-    currentPlan: {
-      goal: "Méditation quotidienne",
-      startDate: "2024-01-01",
-      endDate: "2024-01-30",
-      validationWindow: "19h00 - 21h00",
-      selectedCharity: "Médecins Sans Frontières",
-      amount: 500,
-    },
-  };
-
-  const webLogout = async () => {
-    const confirmed = window.confirm(
-      "Êtes-vous sûr de vouloir vous déconnecter ?"
-    );
-    if (confirmed) {
-      try {
-        await signOut(auth);
-        router.replace("/auth/LoginScreen");
-      } catch (error) {
-        console.error("Logout error:", error);
-      }
-    }
-  };
-
-  const handleLogout = () => {
-    // Alert.alert is not supported on web, so use a confirm dialog instead
-    if (Platform.OS === "web") {
-      webLogout();
-    } else {
-      Alert.alert(
-        "Déconnexion",
-        "Êtes-vous sûr de vouloir vous déconnecter ?",
-        [
-          { text: "Annuler", style: "cancel" },
-          {
-            text: "Déconnexion",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                await signOut(auth);
-                router.replace("/auth/LoginScreen");
-              } catch (error) {
-                console.error("Logout error:", error);
-              }
-            },
-          },
-        ]
-      );
-    }
-  };
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Supprimer le compte",
-      "Cette action est irréversible. Toutes vos données seront perdues.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: () => console.log("Delete account"),
-        },
-      ]
-    );
-  };
-
-  const formatDate = (dateString: string | number | Date) => {
+  const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
-      day: "numeric",
       month: "long",
       year: "numeric",
     });
   };
 
-  const ProfileSection = ({
+  const calculateProgress = () => {
+    return (userProfile.xp / userProfile.nextLevelXp) * 100;
+  };
+
+  const handleEditProfile = () => {
+    //router.push('/edit-profile');
+  };
+
+  const handleSettings = () => {
+    //router.push('/settings');
+  };
+
+  const handleLogout = () => {
+    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Déconnecter",
+        style: "destructive",
+        onPress: () => {
+          // TODO: Implement logout
+          console.log("Logout");
+        },
+      },
+    ]);
+  };
+
+  const StatCard = ({
+    icon,
     title,
-    children,
+    value,
+    subtitle,
   }: {
+    icon: string;
     title: string;
-    children: React.ReactNode;
+    value: string | number;
+    subtitle?: string;
   }) => (
-    <View style={[styles.section, { backgroundColor: cardBackground }]}>
-      <Text style={[styles.sectionTitle, { color: textPrimary }]}>{title}</Text>
-      {children}
+    <View
+      style={[
+        styles.statCard,
+        { backgroundColor: cardBackground, borderColor: border },
+      ]}
+    >
+      <View style={[styles.statIcon, { backgroundColor: `${tint}20` }]}>
+        <Ionicons name={icon as any} size={24} color={tint} />
+      </View>
+      <View style={styles.statContent}>
+        <Text style={[styles.statValue, { color: textPrimary }]}>{value}</Text>
+        <Text style={[styles.statTitle, { color: textSecondary }]}>
+          {title}
+        </Text>
+        {subtitle && (
+          <Text style={[styles.statSubtitle, { color: textSecondary }]}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
     </View>
   );
 
-  type ProfileItemProps = {
-    icon: string;
-    iconType?: "Ionicons" | "MaterialCommunityIcons";
-    title: string;
-    subtitle?: string;
-    onPress?: () => void;
-    rightElement?: React.ReactNode;
-    showArrow?: boolean;
-  };
-
-  const ProfileItem: React.FC<ProfileItemProps> = ({
+  const MenuButton = ({
     icon,
-    iconType = "Ionicons",
     title,
     subtitle,
     onPress,
     rightElement,
-    showArrow = true,
+  }: {
+    icon: string;
+    title: string;
+    subtitle?: string;
+    onPress: () => void;
+    rightElement?: React.ReactNode;
   }) => (
     <TouchableOpacity
-      style={[styles.profileItem, { borderBottomColor: border }]}
+      style={[
+        styles.menuButton,
+        { backgroundColor: cardBackground, borderColor: border },
+      ]}
       onPress={onPress}
-      disabled={!onPress}
+      activeOpacity={0.7}
     >
-      <View style={styles.profileItemLeft}>
-        <View
-          style={[styles.profileItemIcon, { backgroundColor: `${tint}20` }]}
-        >
-          {iconType === "Ionicons" ? (
-            <Ionicons name={icon as any} size={20} color={tint} />
-          ) : (
-            <MaterialCommunityIcons name={icon as any} size={20} color={tint} />
-          )}
+      <View style={styles.menuLeft}>
+        <View style={[styles.menuIcon, { backgroundColor: `${tint}20` }]}>
+          <Ionicons name={icon as any} size={20} color={tint} />
         </View>
-        <View style={styles.profileItemText}>
-          <Text style={[styles.profileItemTitle, { color: textPrimary }]}>
+        <View style={styles.menuText}>
+          <Text style={[styles.menuTitle, { color: textPrimary }]}>
             {title}
           </Text>
           {subtitle && (
-            <Text
-              style={[styles.profileItemSubtitle, { color: textSecondary }]}
-            >
+            <Text style={[styles.menuSubtitle, { color: textSecondary }]}>
               {subtitle}
             </Text>
           )}
         </View>
       </View>
-      <View style={styles.profileItemRight}>
-        {rightElement}
-        {showArrow && onPress && (
-          <Ionicons name="chevron-forward" size={16} color={textSecondary} />
-        )}
-      </View>
+      {rightElement || (
+        <Ionicons name="chevron-forward" size={20} color={textSecondary} />
+      )}
     </TouchableOpacity>
-  );
-
-  const StatCard = ({
-    icon,
-    value,
-    label,
-    color = tint,
-  }: {
-    icon: React.ComponentProps<typeof Ionicons>["name"];
-    value: string;
-    label: string;
-    color?: string;
-  }) => (
-    <View style={[styles.statCard, { backgroundColor: cardBackground }]}>
-      <View style={[styles.statCardIcon, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-      <Text style={[styles.statCardValue, { color: textPrimary }]}>
-        {value}
-      </Text>
-      <Text style={[styles.statCardLabel, { color: textSecondary }]}>
-        {label}
-      </Text>
-    </View>
   );
 
   return (
@@ -215,223 +181,226 @@ export default function ProfileScreen() {
         backgroundColor={backgroundColor}
       />
 
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: cardBackground }]}>
-        <View style={styles.headerContent}>
-          <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: tint }]}>
-              <Text style={styles.avatarText}>
-                {mockUserData.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </Text>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>
+            Profil
+          </Text>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={handleSettings}
+          >
+            <Ionicons name="settings-outline" size={24} color={textPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Profile Card */}
+        <View
+          style={[
+            styles.profileCard,
+            { backgroundColor: cardBackground, borderColor: border },
+          ]}
+        >
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              {userProfile.avatar ? (
+                <Image
+                  source={{ uri: userProfile.avatar }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View
+                  style={[styles.avatarPlaceholder, { backgroundColor: tint }]}
+                >
+                  <Text style={styles.avatarText}>
+                    {userProfile.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={[styles.levelBadge, { backgroundColor: tint }]}>
+                <Text style={styles.levelText}>{userProfile.level}</Text>
+              </View>
             </View>
-            <View style={styles.headerText}>
+
+            <View style={styles.profileInfo}>
               <Text style={[styles.userName, { color: textPrimary }]}>
-                {mockUserData.name}
+                {userProfile.name}
               </Text>
               <Text style={[styles.userEmail, { color: textSecondary }]}>
-                {mockUserData.email}
+                {userProfile.email}
               </Text>
               <Text style={[styles.joinDate, { color: textSecondary }]}>
-                Membre depuis {formatDate(mockUserData.joinDate)}
+                Membre depuis {formatJoinDate(userProfile.joinDate)}
               </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.editButton, { borderColor: tint }]}
+              onPress={handleEditProfile}
+            >
+              <Ionicons name="pencil" size={16} color={tint} />
+            </TouchableOpacity>
+          </View>
+
+          {/* XP Progress */}
+          <View style={styles.xpContainer}>
+            <View style={styles.xpHeader}>
+              <Text style={[styles.xpTitle, { color: textPrimary }]}>
+                Niveau {userProfile.level}
+              </Text>
+              <Text style={[styles.xpText, { color: textSecondary }]}>
+                {userProfile.xp} / {userProfile.nextLevelXp} XP
+              </Text>
+            </View>
+            <View
+              style={[styles.progressBar, { backgroundColor: `${tint}20` }]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: tint, width: `${calculateProgress()}%` },
+                ]}
+              />
             </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Stats Overview */}
-        <View style={styles.statsContainer}>
-          <StatCard
-            icon="trophy"
-            value={String(mockUserData.completedPlans)}
-            label="Plans terminés"
-            color="#F59E0B"
-          />
-          <StatCard
-            icon="trending-up"
-            value={`€${mockUserData.totalAmountRecovered}`}
-            label="Total récupéré"
-            color="#10B981"
-          />
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
           <StatCard
             icon="calendar"
-            value={String(mockUserData.totalPlans)}
-            label="Plans créés"
-            color="#3B82F6"
+            title="Jours au total"
+            value={userStats.totalDays}
+          />
+          <StatCard
+            icon="flame"
+            title="Série actuelle"
+            value={userStats.currentStreak}
+            subtitle="jours"
+          />
+          <StatCard
+            icon="checkmark-circle"
+            title="Habitudes"
+            value={userStats.completedHabits}
+            subtitle="terminées"
+          />
+          <StatCard
+            icon="book"
+            title="Articles"
+            value={userStats.readArticles}
+            subtitle="lus"
           />
         </View>
 
-        {/* Current Plan */}
-        <ProfileSection title="Plan actuel">
-          <ProfileItem
-            icon="target"
-            iconType="MaterialCommunityIcons"
-            title={mockUserData.currentPlan.goal}
-            subtitle={`${formatDate(
-              mockUserData.currentPlan.startDate
-            )} - ${formatDate(mockUserData.currentPlan.endDate)}`}
-            onPress={() => console.log("Edit current plan")}
-          />
-          <ProfileItem
-            icon="time"
-            title="Fenêtre de validation"
-            subtitle={mockUserData.currentPlan.validationWindow}
-            onPress={() => console.log("Edit validation window")}
-          />
-          <ProfileItem
-            icon="heart"
-            title="Œuvre caritative"
-            subtitle={mockUserData.currentPlan.selectedCharity}
-            onPress={() => console.log("Change charity")}
-          />
-          <ProfileItem
-            icon="card"
-            title="Montant déposé"
-            subtitle={`€${mockUserData.currentPlan.amount}`}
-            onPress={() => console.log("View payment details")}
-            showArrow={false}
-          />
-          <ProfileItem
-            icon="add-circle"
-            title="Créer un nouveau plan"
-            subtitle="Définir un nouvel objectif"
-            onPress={() => console.log("Create new plan")}
-          />
-        </ProfileSection>
+        {/* Menu Section */}
+        <View style={styles.menuSection}>
+          <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+            Préférences
+          </Text>
 
-        {/* Settings */}
-        <ProfileSection title="Paramètres">
-          <ProfileItem
+          <MenuButton
             icon="notifications"
             title="Notifications"
-            subtitle="Rappels quotidiens et alertes"
+            subtitle="Rappels et alertes"
+            onPress={() => {}}
             rightElement={
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                trackColor={{ false: border, true: `${tint}50` }}
+                trackColor={{ false: border, true: `${tint}40` }}
                 thumbColor={notificationsEnabled ? tint : textSecondary}
               />
             }
-            showArrow={false}
           />
-          <ProfileItem
+
+          <MenuButton
             icon="moon"
             title="Mode sombre"
             subtitle="Thème de l'application"
+            onPress={() => setDarkModeEnabled(!darkModeEnabled)}
             rightElement={
               <Switch
                 value={darkModeEnabled}
                 onValueChange={setDarkModeEnabled}
-                trackColor={{ false: border, true: `${tint}50` }}
+                trackColor={{ false: border, true: `${tint}40` }}
                 thumbColor={darkModeEnabled ? tint : textSecondary}
               />
             }
-            showArrow={false}
           />
-          <ProfileItem
+
+          <MenuButton
             icon="language"
             title="Langue"
             subtitle="Français"
-            onPress={() => console.log("Change language")}
+            onPress={() => {}}
           />
-          <ProfileItem
-            icon="shield-checkmark"
-            title="Confidentialité"
-            subtitle="Gestion des données"
-            onPress={() => console.log("Privacy settings")}
-          />
-        </ProfileSection>
 
-        {/* Account Management */}
-        <ProfileSection title="Compte">
-          <ProfileItem
-            icon="card"
-            title="Méthodes de paiement"
-            subtitle="Gérer vos cartes et comptes"
-            onPress={() => console.log("Payment methods")}
+          <MenuButton
+            icon="time"
+            title="Rappels"
+            subtitle="Gérer les horaires"
+            onPress={() => {}}
           />
-          <ProfileItem
-            icon="document-text"
-            title="Historique des plans"
-            subtitle="Voir tous vos plans précédents"
-            onPress={() => console.log("Plan history")}
-          />
-          <ProfileItem
-            icon="download"
-            title="Exporter mes données"
-            subtitle="Télécharger vos informations"
-            onPress={() => console.log("Export data")}
-          />
-          <ProfileItem
-            icon="help-circle"
-            title="Aide et support"
-            subtitle="FAQ, contact, guides"
-            onPress={() => console.log("Help center")}
-          />
-        </ProfileSection>
+        </View>
 
-        {/* Legal */}
-        <ProfileSection title="Légal">
-          <ProfileItem
-            icon="document"
-            title="Conditions d'utilisation"
-            onPress={() => console.log("Terms of service")}
-            subtitle={undefined}
-            rightElement={undefined}
-          />
-          <ProfileItem
-            icon="shield"
-            title="Politique de confidentialité"
-            onPress={() => console.log("Privacy policy")}
-            subtitle={undefined}
-            rightElement={undefined}
-          />
-          <ProfileItem
-            icon="information-circle"
-            title="À propos de LockIn"
-            subtitle="Version 1.0.0"
-            onPress={() => console.log("About app")}
-            rightElement={undefined}
-          />
-        </ProfileSection>
-
-        {/* Danger Zone */}
-        <View style={[styles.section, { backgroundColor: cardBackground }]}>
+        {/* Support Section */}
+        <View style={styles.menuSection}>
           <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-            Zone de danger
+            Support
           </Text>
 
-          <TouchableOpacity
-            style={[styles.dangerButton, styles.logoutButton]}
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out" size={20} color="#F59E0B" />
-            <Text style={[styles.dangerButtonText, { color: "#F59E0B" }]}>
-              Se déconnecter
-            </Text>
-          </TouchableOpacity>
+          <MenuButton
+            icon="help-circle"
+            title="Centre d'aide"
+            subtitle="FAQ et support"
+            onPress={() => {}}
+          />
 
-          <TouchableOpacity
-            style={[styles.dangerButton, styles.deleteButton]}
-            onPress={handleDeleteAccount}
-          >
-            <Ionicons name="trash" size={20} color="#EF4444" />
-            <Text style={[styles.dangerButtonText, { color: "#EF4444" }]}>
-              Supprimer le compte
-            </Text>
-          </TouchableOpacity>
+          <MenuButton
+            icon="mail"
+            title="Nous contacter"
+            subtitle="Feedback et suggestions"
+            onPress={() => {}}
+          />
+
+          <MenuButton
+            icon="star"
+            title="Noter l'app"
+            subtitle="Donnez-nous votre avis"
+            onPress={() => {}}
+          />
+
+          <MenuButton
+            icon="document-text"
+            title="Politique de confidentialité"
+            onPress={() => {}}
+          />
         </View>
 
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: textSecondary }]}>
-            LockIn • Restez motivé, atteignez vos objectifs
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={[styles.logoutButton, { borderColor: "#EF4444" }]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Text style={[styles.logoutText, { color: "#EF4444" }]}>
+            Se déconnecter
           </Text>
-        </View>
+        </TouchableOpacity>
+
+        {/* App Version */}
+        <Text style={[styles.appVersion, { color: textSecondary }]}>
+          Version 1.0.0
+        </Text>
       </ScrollView>
     </View>
   );
@@ -441,37 +410,80 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    paddingHorizontal: 20,
   },
-  headerContent: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+  },
+  settingsButton: {
+    padding: 8,
+  },
+  profileCard: {
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  profileHeader: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 20,
   },
   avatarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    position: "relative",
     marginRight: 16,
   },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
-  headerText: {
+  avatarPlaceholder: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  levelBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  levelText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  profileInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 4,
   },
@@ -482,63 +494,55 @@ const styles = StyleSheet.create({
   joinDate: {
     fontSize: 12,
   },
-  content: {
-    flex: 1,
-    marginTop: 15,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
-  statCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
+  xpContainer: {
+    marginTop: 4,
+  },
+  xpHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  statCardValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  statCardLabel: {
-    fontSize: 12,
-    textAlign: "center",
-  },
-  section: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  xpTitle: {
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 16,
   },
-  profileItem: {
+  xpText: {
+    fontSize: 14,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 32,
+  },
+  statCard: {
+    width: (width - 56) / 2,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
   },
-  profileItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  profileItemIcon: {
+  statIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -546,51 +550,83 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  profileItemText: {
+  statContent: {
     flex: 1,
   },
-  profileItemTitle: {
+  statValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  statTitle: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  statSubtitle: {
+    fontSize: 10,
+  },
+  menuSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  menuButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  menuLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  menuText: {
+    flex: 1,
+  },
+  menuTitle: {
     fontSize: 16,
     fontWeight: "500",
     marginBottom: 2,
   },
-  profileItemSubtitle: {
-    fontSize: 12,
+  menuSubtitle: {
+    fontSize: 14,
   },
-  profileItemRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  dangerButton: {
+  logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    marginHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
     borderWidth: 1,
+    marginBottom: 16,
+    gap: 8,
   },
-  logoutButton: {
-    borderColor: "#F59E0B",
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
-  },
-  deleteButton: {
-    borderColor: "#EF4444",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-  },
-  dangerButtonText: {
+  logoutText: {
     fontSize: 16,
     fontWeight: "600",
-    marginLeft: 8,
   },
-  footer: {
-    alignItems: "center",
-    paddingVertical: 20,
-    marginBottom: 40,
-  },
-  footerText: {
+  appVersion: {
+    textAlign: "center",
     fontSize: 12,
+    marginBottom: 20,
   },
 });
