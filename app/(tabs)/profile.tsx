@@ -1,8 +1,14 @@
+import { db } from "@/config/firebase";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { AuthenticatedUserContext } from "@/providers/AuthenticatedUserProvider";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { doc, getDoc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import React, { useContext, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Image,
@@ -17,14 +23,12 @@ import {
 
 const { width } = Dimensions.get("window");
 
-interface UserStats {
-  totalDays: number;
-  currentStreak: number;
-  completedHabits: number;
-  readArticles: number;
-}
+const PROFILE_CACHE_KEY = "profileDataCache";
+const STATS_CACHE_KEY = "statsDataCache";
+const SETTINGS_CACHE_KEY = "settingsDataCache";
 
 interface UserProfile {
+  id: string;
   name: string;
   email: string;
   joinDate: string;
@@ -32,30 +36,52 @@ interface UserProfile {
   level: number;
   xp: number;
   nextLevelXp: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UserStats {
+  totalDays: number;
+  currentStreak: number;
+  completedHabits: number;
+  readArticles: number;
+  lastActiveDate?: string;
+}
+
+interface UserSettings {
+  notifications: boolean;
+  darkMode: boolean;
+  language: string;
+  reminderTime?: string;
 }
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "Alex Martin",
-    email: "alex.martin@example.com",
-    joinDate: "2024-01-01",
-    level: 12,
-    xp: 2340,
-    nextLevelXp: 2500,
-  });
+  const user = useContext(AuthenticatedUserContext);
 
+  // États
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats>({
-    totalDays: 45,
-    currentStreak: 7,
-    completedHabits: 156,
-    readArticles: 23,
+    totalDays: 0,
+    currentStreak: 0,
+    completedHabits: 0,
+    readArticles: 0,
   });
+  const [userSettings, setUserSettings] = useState<UserSettings>({
+    notifications: true,
+    darkMode: colorScheme === "dark",
+    language: "fr",
+  });
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(
-    colorScheme === "dark"
-  );
+  // Redirection si pas d'utilisateur
+  if (!user) {
+    router.replace("/auth/LoginScreen");
+    return null;
+  }
+
+  const userId = user.user.uid;
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -65,6 +91,206 @@ export default function ProfileScreen() {
   const tint = useThemeColor({}, "tint");
   const border = useThemeColor({}, "border");
 
+  // Charger le cache au démarrage
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        const [cachedProfile, cachedStats, cachedSettings] = await Promise.all([
+          AsyncStorage.getItem(PROFILE_CACHE_KEY),
+          AsyncStorage.getItem(STATS_CACHE_KEY),
+          AsyncStorage.getItem(SETTINGS_CACHE_KEY),
+        ]);
+
+        if (cachedProfile) {
+          setUserProfile(JSON.parse(cachedProfile));
+        }
+        if (cachedStats) {
+          setUserStats(JSON.parse(cachedStats));
+        }
+        // Charger les paramètres depuis AsyncStorage uniquement
+        if (cachedSettings) {
+          setUserSettings(JSON.parse(cachedSettings));
+        } else {
+          // Paramètres par défaut si pas de cache
+          const defaultSettings = {
+            notifications: true,
+            darkMode: colorScheme === "dark",
+            language: "fr",
+          };
+          setUserSettings(defaultSettings);
+          AsyncStorage.setItem(
+            SETTINGS_CACHE_KEY,
+            JSON.stringify(defaultSettings)
+          );
+        }
+      } catch (error) {
+        console.error("Error loading cache:", error);
+      }
+    };
+    loadCache();
+  }, [colorScheme]);
+
+  // Listeners Firestore en temps réel
+  useEffect(() => {
+    if (!userId) return;
+
+    const profileRef = doc(db, "users", userId);
+    const statsRef = doc(db, "userStats", userId);
+    const settingsRef = doc(db, "userSettings", userId);
+
+    // Charger les données initiales
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+
+        // Charger le profil
+        const profileSnap = await getDoc(profileRef);
+        if (profileSnap.exists()) {
+          const profileData = {
+            id: profileSnap.id,
+            ...profileSnap.data(),
+          } as UserProfile;
+          setUserProfile(profileData);
+          AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profileData));
+        } else {
+          // Créer un profil par défaut si il n'existe pas
+          await createDefaultProfile();
+        }
+
+        // Charger les stats
+        const statsSnap = await getDoc(statsRef);
+        if (statsSnap.exists()) {
+          const statsData = statsSnap.data() as UserStats;
+          setUserStats(statsData);
+          AsyncStorage.setItem(STATS_CACHE_KEY, JSON.stringify(statsData));
+        } else {
+          const defaultStats = {
+            totalDays: 0,
+            currentStreak: 0,
+            completedHabits: 0,
+            readArticles: 0,
+          };
+          setUserStats(defaultStats);
+          await setDoc(statsRef, defaultStats);
+        }
+
+        // Charger les paramètres
+        const settingsSnap = await getDoc(settingsRef);
+        if (settingsSnap.exists()) {
+          const settingsData = settingsSnap.data() as UserSettings;
+          setUserSettings(settingsData);
+          AsyncStorage.setItem(
+            SETTINGS_CACHE_KEY,
+            JSON.stringify(settingsData)
+          );
+        } else {
+          const defaultSettings = {
+            notifications: true,
+            darkMode: colorScheme === "dark",
+            language: "fr",
+          };
+          setUserSettings(defaultSettings);
+          await setDoc(settingsRef, defaultSettings);
+        }
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        Alert.alert("Erreur", "Impossible de charger les données utilisateur");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
+
+    // Listeners en temps réel
+    const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const profileData = {
+          id: docSnap.id,
+          ...docSnap.data(),
+        } as UserProfile;
+        setUserProfile(profileData);
+        AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profileData));
+      }
+    });
+
+    const unsubscribeStats = onSnapshot(statsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const statsData = docSnap.data() as UserStats;
+        setUserStats(statsData);
+        AsyncStorage.setItem(STATS_CACHE_KEY, JSON.stringify(statsData));
+      }
+    });
+
+    const unsubscribeSettings = onSnapshot(settingsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const settingsData = docSnap.data() as UserSettings;
+        setUserSettings(settingsData);
+        AsyncStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsData));
+      }
+    });
+
+    return () => {
+      unsubscribeProfile();
+      unsubscribeStats();
+      unsubscribeSettings();
+    };
+  }, [userId]);
+
+  const createDefaultProfile = async () => {
+    try {
+      const now = new Date().toISOString();
+      const defaultProfile = {
+        name:
+          user.user.displayName ||
+          user.user.email?.split("@")[0] ||
+          "Utilisateur",
+        email: user.user.email || "",
+        joinDate: now,
+        level: 1,
+        xp: 0,
+        nextLevelXp: 100,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const profileRef = doc(db, "users", userId);
+      await setDoc(profileRef, defaultProfile);
+
+      const profileData = { id: userId, ...defaultProfile } as UserProfile;
+      setUserProfile(profileData);
+      AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profileData));
+    } catch (error) {
+      console.error("Error creating default profile:", error);
+    }
+  };
+
+  const handleSettingChange = async (
+    key: keyof UserSettings,
+    value: boolean | string
+  ) => {
+    if (!userSettings || !userId) return;
+
+    try {
+      setUpdating(true);
+
+      // Mise à jour optimiste
+      const newSettings = { ...userSettings, [key]: value };
+      setUserSettings(newSettings);
+
+      // Mise à jour en base
+      const settingsRef = doc(db, "userSettings", userId);
+      await updateDoc(settingsRef, { [key]: value });
+    } catch (error) {
+      console.error("Error updating setting:", error);
+      // Reverser le changement en cas d'erreur
+      setUserSettings(userSettings);
+      Alert.alert("Erreur", "Impossible de sauvegarder les paramètres");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
       month: "long",
@@ -73,15 +299,16 @@ export default function ProfileScreen() {
   };
 
   const calculateProgress = () => {
+    if (!userProfile) return 0;
     return (userProfile.xp / userProfile.nextLevelXp) * 100;
   };
 
   const handleEditProfile = () => {
-    //router.push('/edit-profile');
+    Alert.alert("À venir", "La modification du profil sera bientôt disponible");
   };
 
   const handleSettings = () => {
-    //router.push('/settings');
+    Alert.alert("À venir", "La page des paramètres sera bientôt disponible");
   };
 
   const handleLogout = () => {
@@ -152,6 +379,7 @@ export default function ProfileScreen() {
       ]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={updating}
     >
       <View style={styles.menuLeft}>
         <View style={[styles.menuIcon, { backgroundColor: `${tint}20` }]}>
@@ -173,6 +401,44 @@ export default function ProfileScreen() {
       )}
     </TouchableOpacity>
   );
+
+  // Affichage de chargement
+  if (loading) {
+    return (
+      <View
+        style={[styles.container, styles.loadingContainer, { backgroundColor }]}
+      >
+        <ActivityIndicator size="large" color={tint} />
+        <Text style={[styles.loadingText, { color: textPrimary }]}>
+          Chargement du profil...
+        </Text>
+      </View>
+    );
+  }
+
+  // Affichage d'erreur si pas de profil
+  if (!userProfile) {
+    return (
+      <View
+        style={[styles.container, styles.errorContainer, { backgroundColor }]}
+      >
+        <Ionicons
+          name="person-circle-outline"
+          size={64}
+          color={textSecondary}
+        />
+        <Text style={[styles.errorText, { color: textPrimary }]}>
+          Profil introuvable
+        </Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: tint }]}
+          onPress={createDefaultProfile}
+        >
+          <Text style={styles.retryButtonText}>Créer le profil</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -275,82 +541,94 @@ export default function ProfileScreen() {
         </View>
 
         {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <StatCard
-            icon="calendar"
-            title="Jours au total"
-            value={userStats.totalDays}
-          />
-          <StatCard
-            icon="flame"
-            title="Série actuelle"
-            value={userStats.currentStreak}
-            subtitle="jours"
-          />
-          <StatCard
-            icon="checkmark-circle"
-            title="Habitudes"
-            value={userStats.completedHabits}
-            subtitle="terminées"
-          />
-          <StatCard
-            icon="book"
-            title="Articles"
-            value={userStats.readArticles}
-            subtitle="lus"
-          />
-        </View>
+        {userStats && (
+          <View style={styles.statsGrid}>
+            <StatCard
+              icon="calendar"
+              title="Jours au total"
+              value={userStats.totalDays}
+            />
+            <StatCard
+              icon="flame"
+              title="Série actuelle"
+              value={userStats.currentStreak}
+              subtitle="jours"
+            />
+            <StatCard
+              icon="checkmark-circle"
+              title="Habitudes"
+              value={userStats.completedHabits}
+              subtitle="terminées"
+            />
+            <StatCard
+              icon="book"
+              title="Articles"
+              value={userStats.readArticles}
+              subtitle="lus"
+            />
+          </View>
+        )}
 
         {/* Menu Section */}
-        <View style={styles.menuSection}>
-          <Text style={[styles.sectionTitle, { color: textPrimary }]}>
-            Préférences
-          </Text>
+        {userSettings && (
+          <View style={styles.menuSection}>
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+              Préférences
+            </Text>
 
-          <MenuButton
-            icon="notifications"
-            title="Notifications"
-            subtitle="Rappels et alertes"
-            onPress={() => {}}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: border, true: `${tint}40` }}
-                thumbColor={notificationsEnabled ? tint : textSecondary}
-              />
-            }
-          />
+            <MenuButton
+              icon="notifications"
+              title="Notifications"
+              subtitle="Rappels et alertes"
+              onPress={() => {}}
+              rightElement={
+                <Switch
+                  value={userSettings.notifications}
+                  onValueChange={(value) =>
+                    handleSettingChange("notifications", value)
+                  }
+                  trackColor={{ false: border, true: `${tint}40` }}
+                  thumbColor={userSettings.notifications ? tint : textSecondary}
+                  disabled={updating}
+                />
+              }
+            />
 
-          <MenuButton
-            icon="moon"
-            title="Mode sombre"
-            subtitle="Thème de l'application"
-            onPress={() => setDarkModeEnabled(!darkModeEnabled)}
-            rightElement={
-              <Switch
-                value={darkModeEnabled}
-                onValueChange={setDarkModeEnabled}
-                trackColor={{ false: border, true: `${tint}40` }}
-                thumbColor={darkModeEnabled ? tint : textSecondary}
-              />
-            }
-          />
+            <MenuButton
+              icon="moon"
+              title="Mode sombre"
+              subtitle="Thème de l'application"
+              onPress={() =>
+                handleSettingChange("darkMode", !userSettings.darkMode)
+              }
+              rightElement={
+                <Switch
+                  value={userSettings.darkMode}
+                  onValueChange={(value) =>
+                    handleSettingChange("darkMode", value)
+                  }
+                  trackColor={{ false: border, true: `${tint}40` }}
+                  thumbColor={userSettings.darkMode ? tint : textSecondary}
+                  disabled={updating}
+                />
+              }
+            />
 
-          <MenuButton
-            icon="language"
-            title="Langue"
-            subtitle="Français"
-            onPress={() => {}}
-          />
+            <MenuButton
+              icon="language"
+              title="Langue"
+              subtitle={userSettings.language === "fr" ? "Français" : "English"}
+              onPress={() => {}}
+            />
 
-          <MenuButton
-            icon="time"
-            title="Rappels"
-            subtitle="Gérer les horaires"
-            onPress={() => {}}
-          />
-        </View>
+            <MenuButton
+              icon="time"
+              title="Rappels"
+              subtitle="Gérer les horaires"
+              onPress={() => {}}
+            />
+          </View>
+        )}
 
         {/* Support Section */}
         <View style={styles.menuSection}>
@@ -406,6 +684,7 @@ export default function ProfileScreen() {
   );
 }
 
+// Styles restent identiques à votre version précédente
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -430,6 +709,36 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 8,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
   profileCard: {
     marginHorizontal: 20,
